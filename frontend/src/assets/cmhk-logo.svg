@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <g transform="translate(100,50)">
+    <!-- 蓝色波浪 -->
+    <path d="M100,0 C130,0 130,40 160,40 C190,40 190,0 220,0" 
+          stroke="#00A0E9" stroke-width="20" fill="none"/>
+    <path d="M100,30 C130,30 130,70 160,70 C190,70 190,30 220,30" 
+          stroke="#00A0E9" stroke-width="20" fill="none"/>
+    
+    <!-- 绿色波浪 -->
+    <path d="M130,20 C160,20 160,60 190,60" 
+          stroke="#95C11F" stroke-width="20" fill="none"/>
+    
+    <!-- 文字 -->
+    <text x="60" y="120" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="#00A0E9">
+      中國移動
+    </text>
+    <text x="45" y="160" font-family="Arial, sans-serif" font-size="28" fill="#00A0E9">
+      China Mobile
+    </text>
+  </g>
+</svg> 
