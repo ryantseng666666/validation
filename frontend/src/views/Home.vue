@@ -1,95 +1,137 @@
 <template>
   <div class="home">
     <el-container>
-      <el-header>
+      <!-- 顶部导航栏 -->
+      <el-header class="header">
         <div class="header-content">
           <div class="header-left">
-            <h1>装维质检系统</h1>
-            <el-menu mode="horizontal" :router="true" v-if="isLoggedIn">
-              <el-menu-item index="/">首页</el-menu-item>
-              <el-menu-item index="/speed-test">速度测试</el-menu-item>
-              <el-menu-item index="/optical-power">光功率读数</el-menu-item>
-              <el-menu-item index="/sn-code">SN码识别</el-menu-item>
+            <div class="logo">
+              <h2>装维质检系统</h2>
+            </div>
+            <el-menu
+              mode="horizontal"
+              :router="true"
+              class="main-menu"
+              :default-active="$route.path">
+              <el-menu-item index="/">
+                <el-icon><House /></el-icon>
+                <span>首页</span>
+              </el-menu-item>
+              <el-menu-item index="/work-order">
+                <el-icon><Document /></el-icon>
+                <span>工单详情</span>
+              </el-menu-item>
+              <el-menu-item index="/speed-test">
+                <el-icon><Monitor /></el-icon>
+                <span>速度测试识别</span>
+              </el-menu-item>
+              <el-menu-item index="/optical-power">
+                <el-icon><Lightning /></el-icon>
+                <span>光功率识别</span>
+              </el-menu-item>
+              <el-menu-item index="/sn-code">
+                <el-icon><Cpu /></el-icon>
+                <span>SN识别</span>
+              </el-menu-item>
             </el-menu>
           </div>
-          <div class="header-right" v-if="isLoggedIn">
-            <span class="username">{{ userInfo.username }}</span>
-            <el-button type="text" @click="handleLogout">退出登录</el-button>
-          </div>
-          <div class="header-right" v-else>
-            <el-button type="text" @click="$router.push('/login')">登录</el-button>
-            <el-button type="text" @click="$router.push('/register')">注册</el-button>
+          <div class="header-right">
+            <template v-if="isLoggedIn">
+              <el-dropdown>
+                <span class="user-dropdown">
+                  {{ userInfo.username }}
+                  <el-icon><CaretBottom /></el-icon>
+                </span>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item @click="handleLogout">退出登录</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </template>
+            <template v-else>
+              <el-button type="primary" @click="$router.push('/login')">登录</el-button>
+              <el-button @click="$router.push('/register')">注册</el-button>
+            </template>
           </div>
         </div>
       </el-header>
-      
+
+      <!-- 主要内容区域 -->
       <el-main>
-        <el-row :gutter="20" justify="center">
-          <el-col :span="16">
-            <!-- 已登录显示功能模块 -->
-            <template v-if="isLoggedIn">
-              <h2 class="section-title">功能模块</h2>
-              <el-row :gutter="20">
-                <el-col :span="8">
-                  <el-card class="feature-card" @click="$router.push('/speed-test')">
-                    <h3>速度测试场景</h3>
-                    <p>自动识别网速测试截图，快速获取上传速度、下载速度等信息</p>
-                    <el-button type="primary">开始使用</el-button>
-                  </el-card>
-                </el-col>
-                <el-col :span="8">
-                  <el-card class="feature-card" @click="$router.push('/optical-power')">
-                    <h3>光功率读数场景</h3>
-                    <p>精确识别光功率读数，提供准确的数值分析</p>
-                    <el-button type="primary">开始使用</el-button>
-                  </el-card>
-                </el-col>
-                <el-col :span="8">
-                  <el-card class="feature-card" @click="$router.push('/sn-code')">
-                    <h3>SN码识别场景</h3>
-                    <p>快速识别设备SN码，提高工作效率</p>
-                    <el-button type="primary">开始使用</el-button>
-                  </el-card>
-                </el-col>
-              </el-row>
-              
-              <h2 class="section-title">使用流程</h2>
-              <el-row :gutter="20">
-                <el-col :span="8">
-                  <div class="step-card">
-                    <div class="step-number">1</div>
-                    <h3>上传图片</h3>
-                    <p>选择需要识别的图片文件</p>
+        <template v-if="isLoggedIn">
+          <div class="dashboard">
+            <h2 class="section-title">功能模块</h2>
+            <el-row :gutter="24">
+              <el-col :span="8">
+                <el-card class="feature-card" shadow="hover" @click="$router.push('/speed-test')">
+                  <div class="feature-icon">
+                    <el-icon><Monitor /></el-icon>
                   </div>
-                </el-col>
-                <el-col :span="8">
-                  <div class="step-card">
-                    <div class="step-number">2</div>
-                    <h3>AI识别</h3>
-                    <p>系统自动分析图片内容</p>
+                  <h3>速度测试识别</h3>
+                  <p>自动识别网速测试截图，快速获取上传速度、下载速度等信息</p>
+                </el-card>
+              </el-col>
+              <el-col :span="8">
+                <el-card class="feature-card" shadow="hover" @click="$router.push('/optical-power')">
+                  <div class="feature-icon">
+                    <el-icon><Lightning /></el-icon>
                   </div>
-                </el-col>
-                <el-col :span="8">
-                  <div class="step-card">
-                    <div class="step-number">3</div>
-                    <h3>获取结果</h3>
-                    <p>快速展示识别结果</p>
+                  <h3>光功率识别</h3>
+                  <p>精确识别光功率读数，提供准确的数值分析</p>
+                </el-card>
+              </el-col>
+              <el-col :span="8">
+                <el-card class="feature-card" shadow="hover" @click="$router.push('/sn-code')">
+                  <div class="feature-icon">
+                    <el-icon><Cpu /></el-icon>
                   </div>
-                </el-col>
-              </el-row>
-            </template>
-            
-            <!-- 未登录显示欢迎信息 -->
-            <el-card class="welcome-card" v-else>
-              <h2>欢迎使用装维质检系统</h2>
-              <p>这是一个用于验证和管理的系统平台。</p>
-              <div class="action-buttons">
-                <el-button type="primary" @click="$router.push('/login')">立即登录</el-button>
-                <el-button @click="$router.push('/register')">注册账号</el-button>
-              </div>
-            </el-card>
-          </el-col>
-        </el-row>
+                  <h3>SN码识别</h3>
+                  <p>快速识别设备SN码，提高工作效率</p>
+                </el-card>
+              </el-col>
+            </el-row>
+
+            <h2 class="section-title">数据概览</h2>
+            <el-row :gutter="24">
+              <el-col :span="6">
+                <el-card class="stat-card" shadow="hover">
+                  <div class="stat-value">128</div>
+                  <div class="stat-label">今日识别总数</div>
+                </el-card>
+              </el-col>
+              <el-col :span="6">
+                <el-card class="stat-card" shadow="hover">
+                  <div class="stat-value">98%</div>
+                  <div class="stat-label">识别准确率</div>
+                </el-card>
+              </el-col>
+              <el-col :span="6">
+                <el-card class="stat-card" shadow="hover">
+                  <div class="stat-value">1.2s</div>
+                  <div class="stat-label">平均响应时间</div>
+                </el-card>
+              </el-col>
+              <el-col :span="6">
+                <el-card class="stat-card" shadow="hover">
+                  <div class="stat-value">2,456</div>
+                  <div class="stat-label">累计处理工单</div>
+                </el-card>
+              </el-col>
+            </el-row>
+          </div>
+        </template>
+        
+        <template v-else>
+          <div class="welcome">
+            <h1>欢迎使用装维质检系统</h1>
+            <p>高效、准确的质检解决方案</p>
+            <div class="action-buttons">
+              <el-button type="primary" size="large" @click="$router.push('/login')">立即开始</el-button>
+              <el-button size="large" @click="$router.push('/register')">注册账号</el-button>
+            </div>
+          </div>
+        </template>
       </el-main>
     </el-container>
   </div>
@@ -99,6 +141,14 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import {
+  House,
+  Document,
+  Monitor,
+  Lightning,
+  Cpu,
+  CaretBottom
+} from '@element-plus/icons-vue'
 
 const router = useRouter()
 const userInfo = ref({
@@ -129,339 +179,175 @@ const handleLogout = () => {
 <style scoped>
 .home {
   min-height: 100vh;
-  background: linear-gradient(180deg, #f8f9fa 0%, #fff 100%);
-  position: relative;
-  overflow: hidden;
+  background-color: #f0f2f5;
 }
 
-.home::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 600px;
-  background: linear-gradient(135deg, rgba(22,93,255,0.05) 0%, rgba(64,128,255,0.05) 100%);
-  transform: skewY(-6deg);
-  transform-origin: top left;
+.header {
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0,21,41,0.08);
+  position: fixed;
+  width: 100%;
+  z-index: 100;
+  padding: 0;
 }
 
 .header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 24px;
   height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  min-width: 1200px;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 48px;
+  gap: 24px;
+  flex: 1;
 }
 
-.header-left h1 {
-  font-size: 24px;
-  font-weight: 600;
-  color: #1d2129;
-  margin: 0;
-  background: linear-gradient(90deg, #165dff, #4080ff);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.header-right {
+.logo {
   display: flex;
   align-items: center;
-  gap: 24px;
 }
 
-.username {
-  font-size: 14px;
-  color: #4e5969;
-  font-weight: 500;
-}
-
-.el-header {
-  background-color: rgba(255,255,255,0.9);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 1px 2px rgba(0,21,41,0.08);
-  position: fixed;
-  width: 100%;
-  z-index: 100;
-}
-
-.el-main {
-  padding-top: 84px;
-  position: relative;
-}
-
-.section-title {
-  margin: 48px 0 32px;
-  color: #1d2129;
-  font-size: 32px;
-  font-weight: 600;
-  text-align: center;
-  position: relative;
-}
-
-.section-title::after {
-  content: '';
-  position: absolute;
-  bottom: -12px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 48px;
-  height: 4px;
-  background: linear-gradient(90deg, #165dff, #4080ff);
-  border-radius: 2px;
-}
-
-.feature-card {
-  height: 100%;
-  text-align: center;
-  padding: 40px 24px;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border: none;
-  background: #fff;
-  border-radius: 16px;
-  position: relative;
-  overflow: hidden;
-}
-
-.feature-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #165dff, #4080ff);
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-.feature-card:hover::before {
-  opacity: 1;
-}
-
-.feature-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 12px 32px rgba(0,0,0,0.1);
-}
-
-.feature-card h3 {
-  margin: 24px 0 16px;
-  color: #1d2129;
-  font-size: 22px;
-  font-weight: 600;
-}
-
-.feature-card p {
-  color: #4e5969;
-  margin-bottom: 28px;
-  min-height: 48px;
-  line-height: 1.8;
-  font-size: 15px;
-}
-
-.feature-card .el-button {
-  padding: 12px 28px;
-  font-size: 16px;
-  border-radius: 8px;
-  background: linear-gradient(90deg, #165dff, #4080ff);
-  border: none;
-  transition: all 0.3s;
-}
-
-.feature-card .el-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(22,93,255,0.2);
-}
-
-.step-card {
-  text-align: center;
-  padding: 40px 24px;
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-  position: relative;
-  overflow: hidden;
-}
-
-.step-card::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 120px;
-  height: 120px;
-  background: linear-gradient(135deg, rgba(22,93,255,0.05) 0%, rgba(64,128,255,0.05) 100%);
-  border-radius: 0 0 0 120px;
-}
-
-.step-number {
-  width: 56px;
-  height: 56px;
-  line-height: 56px;
-  border-radius: 28px;
-  background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
-  color: white;
-  font-size: 24px;
-  margin: 0 auto 28px;
-  font-weight: 600;
-  position: relative;
-  z-index: 1;
-  box-shadow: 0 8px 16px rgba(22,93,255,0.2);
-}
-
-.step-card h3 {
+.logo h2 {
   color: #1d2129;
   font-size: 20px;
+  margin: 0;
   font-weight: 600;
-  margin-bottom: 16px;
-  position: relative;
-  z-index: 1;
 }
 
-.step-card p {
-  color: #4e5969;
-  line-height: 1.8;
-  font-size: 15px;
-  position: relative;
-  z-index: 1;
-}
-
-.welcome-card {
-  margin-top: 48px;
-  text-align: center;
-  padding: 64px;
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-  position: relative;
-  overflow: hidden;
-}
-
-.welcome-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 200px;
-  background: linear-gradient(135deg, rgba(22,93,255,0.05) 0%, rgba(64,128,255,0.05) 100%);
-  transform: skewY(-6deg);
-  transform-origin: top left;
-}
-
-.welcome-card h2 {
-  margin-bottom: 28px;
-  color: #1d2129;
-  font-size: 36px;
-  font-weight: 600;
-  position: relative;
-}
-
-.welcome-card p {
-  margin-bottom: 16px;
-  color: #4e5969;
-  line-height: 1.8;
-  font-size: 16px;
-  position: relative;
-}
-
-.action-buttons {
-  margin-top: 40px;
-  position: relative;
-}
-
-.action-buttons .el-button {
-  margin: 0 16px;
-  padding: 14px 36px;
-  font-size: 16px;
-  border-radius: 8px;
-  transition: all 0.3s;
-}
-
-.action-buttons .el-button--primary {
-  background: linear-gradient(90deg, #165dff, #4080ff);
-  border: none;
-}
-
-.action-buttons .el-button--primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(22,93,255,0.2);
-}
-
-.action-buttons .el-button--default {
-  border: 2px solid #e5e6eb;
-  color: #4e5969;
-}
-
-.action-buttons .el-button--default:hover {
-  border-color: #165dff;
-  color: #165dff;
+.main-menu {
+  border-bottom: none;
+  flex: 1;
+  white-space: nowrap;
 }
 
 :deep(.el-menu--horizontal) {
   border-bottom: none;
-  background: transparent;
 }
 
-:deep(.el-menu-item) {
-  font-size: 15px;
-  color: #4e5969;
+:deep(.el-menu--horizontal > .el-menu-item) {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   height: 64px;
   line-height: 64px;
-  padding: 0 24px;
-  transition: all 0.3s;
+  border-bottom: none;
+  padding: 0 16px;
 }
 
 :deep(.el-menu-item.is-active) {
-  color: #165dff;
+  color: #1890ff;
+  background: transparent;
+  border-bottom: 2px solid #1890ff;
+}
+
+.user-dropdown {
+  cursor: pointer;
+  color: #1d2129;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.el-main {
+  padding-top: 84px;
+  min-height: 100vh;
+}
+
+.dashboard {
+  padding: 24px;
+}
+
+.section-title {
+  font-size: 24px;
   font-weight: 500;
-  background: linear-gradient(90deg, rgba(22,93,255,0.1), rgba(64,128,255,0.1));
-  border-radius: 8px;
+  color: #1d2129;
+  margin: 32px 0 24px;
 }
 
-:deep(.el-menu-item:hover) {
-  color: #165dff;
-  background: rgba(22,93,255,0.05);
-  border-radius: 8px;
+.feature-card {
+  height: 240px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
 }
 
-@media (max-width: 768px) {
-  .header-left {
-    gap: 24px;
-  }
-  
-  .header-left h1 {
-    font-size: 20px;
-  }
-  
-  .section-title {
-    font-size: 28px;
-  }
-  
-  .feature-card {
-    padding: 32px 20px;
-  }
-  
-  .welcome-card {
-    padding: 48px 24px;
-  }
-  
-  .welcome-card h2 {
-    font-size: 28px;
-  }
-  
-  .action-buttons .el-button {
-    padding: 12px 24px;
-    margin: 0 8px;
-  }
+.feature-card:hover {
+  transform: translateY(-4px);
+}
+
+.feature-icon {
+  font-size: 48px;
+  color: #1890ff;
+  margin-bottom: 16px;
+}
+
+.feature-card h3 {
+  font-size: 18px;
+  color: #1d2129;
+  margin: 16px 0 8px;
+}
+
+.feature-card p {
+  font-size: 14px;
+  color: #4e5969;
+  line-height: 1.5;
+  padding: 0 24px;
+}
+
+.stat-card {
+  text-align: center;
+  padding: 24px;
+}
+
+.stat-value {
+  font-size: 36px;
+  font-weight: 500;
+  color: #1890ff;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #4e5969;
+}
+
+.welcome {
+  text-align: center;
+  padding: 120px 0;
+}
+
+.welcome h1 {
+  font-size: 48px;
+  font-weight: 600;
+  color: #1d2129;
+  margin-bottom: 16px;
+}
+
+.welcome p {
+  font-size: 20px;
+  color: #4e5969;
+  margin-bottom: 32px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+
+.header-right {
+  display: flex;
+  gap: 16px;
+  align-items: center;
 }
 </style> 

@@ -66,8 +66,10 @@
               <el-upload
                 class="upload-component"
                 drag
-                action="/api/sn-code/upload"
+                action="/api/sn-code/predict"
                 :headers="headers"
+                :data="{ image: '' }"
+                :http-request="customUpload"
                 :on-success="handleUploadSuccess"
                 :on-error="handleUploadError"
                 :before-upload="beforeUpload">
@@ -187,6 +189,35 @@ const handleUploadSuccess = (response) => {
 
 const handleUploadError = () => {
   ElMessage.error('上传失败')
+}
+
+const customUpload = async ({ file }) => {
+  try {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = async (e) => {
+      const base64Image = e.target.result.split(',')[1]
+      const response = await fetch('/api/sn-code/predict', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers.value
+        },
+        body: JSON.stringify({
+          image: base64Image
+        })
+      })
+      
+      if (!response.ok) {
+        throw new Error('上传失败')
+      }
+      
+      const data = await response.json()
+      handleUploadSuccess(data)
+    }
+  } catch (error) {
+    handleUploadError(error)
+  }
 }
 </script>
 
