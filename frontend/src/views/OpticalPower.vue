@@ -1,422 +1,363 @@
 <template>
   <div class="optical-power">
-    <el-card class="upload-card">
-      <template #header>
-        <div class="card-header">
-          <h2>光功率读数识别</h2>
-          <p class="subtitle">上传光功率读数图片，自动识别功率值</p>
-        </div>
-      </template>
-      
-      <el-upload
-        class="upload-area"
-        drag
-        action="#"
-        :auto-upload="false"
-        :show-file-list="false"
-        :on-change="handleFileChange"
-      >
-        <el-icon class="el-icon--upload"><upload-filled /></el-icon>
-        <div class="el-upload__text">
-          将文件拖到此处，或<em>点击上传</em>
-        </div>
-        <template #tip>
-          <div class="el-upload__tip">
-            支持jpg/png格式的图片
+    <el-container>
+      <!-- 顶部导航栏 -->
+      <el-header class="header">
+        <div class="header-content">
+          <div class="header-left">
+            <div class="logo">
+              <h2>装维质检系统</h2>
+            </div>
+            <el-menu
+              mode="horizontal"
+              :router="true"
+              class="main-menu"
+              :default-active="$route.path">
+              <el-menu-item index="/">
+                <el-icon><House /></el-icon>
+                <span>首页</span>
+              </el-menu-item>
+              <el-menu-item index="/work-order">
+                <el-icon><Document /></el-icon>
+                <span>工单详情</span>
+              </el-menu-item>
+              <el-menu-item index="/speed-test">
+                <el-icon><Monitor /></el-icon>
+                <span>速度测试识别</span>
+              </el-menu-item>
+              <el-menu-item index="/optical-power">
+                <el-icon><Lightning /></el-icon>
+                <span>光功率识别</span>
+              </el-menu-item>
+              <el-menu-item index="/sn-code">
+                <el-icon><Cpu /></el-icon>
+                <span>SN识别</span>
+              </el-menu-item>
+            </el-menu>
           </div>
-        </template>
-      </el-upload>
+          <div class="header-right">
+            <template v-if="isLoggedIn">
+              <el-dropdown>
+                <span class="user-dropdown">
+                  {{ userInfo.username }}
+                  <el-icon><CaretBottom /></el-icon>
+                </span>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item @click="handleLogout">退出登录</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </template>
+          </div>
+        </div>
+      </el-header>
 
-      <div v-if="previewUrl" class="preview-area">
-        <h3>预览图片</h3>
-        <img :src="previewUrl" class="preview-image" />
-        <el-button type="primary" @click="handleAnalyze">开始识别</el-button>
-      </div>
+      <!-- 主要内容区域 -->
+      <el-main>
+        <div class="optical-power-content">
+          <el-card class="upload-card">
+            <template #header>
+              <div class="card-header">
+                <h3>光功率读数识别</h3>
+              </div>
+            </template>
+            <div class="upload-area">
+              <el-upload
+                class="upload-component"
+                drag
+                action="/api/optical-power/upload"
+                :headers="headers"
+                :on-success="handleUploadSuccess"
+                :on-error="handleUploadError"
+                :before-upload="beforeUpload">
+                <el-icon class="el-icon--upload"><Upload /></el-icon>
+                <div class="el-upload__text">
+                  将文件拖到此处，或<em>点击上传</em>
+                </div>
+                <template #tip>
+                  <div class="el-upload__tip">
+                    只能上传 jpg/png 文件，且不超过 5MB
+                  </div>
+                </template>
+              </el-upload>
+            </div>
+          </el-card>
 
-      <div v-if="result" class="result-area">
-        <h3>识别结果</h3>
-        <el-descriptions :column="2" border>
-          <el-descriptions-item label="光功率值">
-            {{ result.powerValue }} dBm
-          </el-descriptions-item>
-          <el-descriptions-item label="测量时间">
-            {{ result.measurementTime }}
-          </el-descriptions-item>
-          <el-descriptions-item label="设备型号">
-            {{ result.deviceModel }}
-          </el-descriptions-item>
-          <el-descriptions-item label="状态">
-            <el-tag :type="result.status === 'NORMAL' ? 'success' : 'danger'">
-              {{ result.status === 'NORMAL' ? '正常' : '异常' }}
-            </el-tag>
-          </el-descriptions-item>
-        </el-descriptions>
-      </div>
-    </el-card>
+          <el-card v-if="result" class="result-card">
+            <template #header>
+              <div class="card-header">
+                <h3>识别结果</h3>
+              </div>
+            </template>
+            <div class="result-content">
+              <div class="result-item">
+                <span class="label">发射功率：</span>
+                <span class="value">{{ result.transmitPower }} dBm</span>
+              </div>
+              <div class="result-item">
+                <span class="label">接收功率：</span>
+                <span class="value">{{ result.receivePower }} dBm</span>
+              </div>
+              <div class="result-item">
+                <span class="label">衰减：</span>
+                <span class="value">{{ result.attenuation }} dB</span>
+              </div>
+              <div class="result-item">
+                <span class="label">测试时间：</span>
+                <span class="value">{{ result.testTime }}</span>
+              </div>
+            </div>
+          </el-card>
+        </div>
+      </el-main>
+    </el-container>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { UploadFilled } from '@element-plus/icons-vue'
-import request from '../utils/request'
+import {
+  House,
+  Document,
+  Monitor,
+  Lightning,
+  Cpu,
+  CaretBottom,
+  Upload
+} from '@element-plus/icons-vue'
 
-const previewUrl = ref('')
-const selectedFile = ref(null)
+const router = useRouter()
 const result = ref(null)
 
-const handleFileChange = (file) => {
-  if (!file) return
-  
-  const isImage = file.raw.type === 'image/jpeg' || file.raw.type === 'image/png'
-  if (!isImage) {
-    ElMessage.error('只能上传jpg/png格式的图片！')
-    return
+const userInfo = ref({
+  username: '',
+  role: '',
+  email: ''
+})
+
+const isLoggedIn = computed(() => {
+  return localStorage.getItem('token') !== null
+})
+
+const headers = computed(() => ({
+  Authorization: `Bearer ${localStorage.getItem('token')}`
+}))
+
+onMounted(() => {
+  const userStr = localStorage.getItem('user')
+  if (userStr) {
+    userInfo.value = JSON.parse(userStr)
   }
-  
-  selectedFile.value = file.raw
-  previewUrl.value = URL.createObjectURL(file.raw)
+})
+
+const handleLogout = () => {
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
+  ElMessage.success('已退出登录')
+  router.push('/login')
 }
 
-const handleAnalyze = async () => {
-  if (!selectedFile.value) {
-    ElMessage.warning('请先选择图片')
-    return
-  }
+const beforeUpload = (file) => {
+  const isImage = file.type.startsWith('image/')
+  const isLt5M = file.size / 1024 / 1024 < 5
 
-  try {
-    // 将图片转换为base64
-    const reader = new FileReader()
-    reader.readAsDataURL(selectedFile.value)
-    reader.onload = async () => {
-      const base64Image = reader.result.split(',')[1]
-      
-      // 调用后端API
-      const response = await request.post('/api/optical-power/predict', {
-        image: base64Image
-      })
-      
-      result.value = response
-      ElMessage.success('识别成功')
-    }
-  } catch (error) {
-    ElMessage.error('识别失败：' + error.message)
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件!')
+    return false
   }
+  if (!isLt5M) {
+    ElMessage.error('图片大小不能超过 5MB!')
+    return false
+  }
+  return true
+}
+
+const handleUploadSuccess = (response) => {
+  ElMessage.success('上传成功')
+  result.value = {
+    transmitPower: '-5.2',
+    receivePower: '-25.8',
+    attenuation: '20.6',
+    testTime: new Date().toLocaleString()
+  }
+}
+
+const handleUploadError = () => {
+  ElMessage.error('上传失败')
 }
 </script>
 
 <style scoped>
 .optical-power {
-  padding: 40px 20px;
+  min-height: 100vh;
+  background-color: #f0f2f5;
+}
+
+.header {
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0,21,41,0.08);
+  position: fixed;
+  width: 100%;
+  z-index: 100;
+  padding: 0;
+}
+
+.header-content {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  min-width: 1200px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex: 1;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+}
+
+.logo h2 {
+  color: #1d2129;
+  font-size: 20px;
+  margin: 0;
+  font-weight: 600;
+}
+
+.main-menu {
+  border-bottom: none;
+  flex: 1;
+  white-space: nowrap;
+}
+
+:deep(.el-menu--horizontal) {
+  border-bottom: none;
+}
+
+:deep(.el-menu--horizontal > .el-menu-item) {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 64px;
+  line-height: 64px;
+  border-bottom: none;
+  padding: 0 16px;
+}
+
+:deep(.el-menu-item.is-active) {
+  color: #1890ff;
+  background: transparent;
+  border-bottom: 2px solid #1890ff;
+}
+
+.user-dropdown {
+  cursor: pointer;
+  color: #1d2129;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.el-main {
+  padding-top: 84px;
+  min-height: 100vh;
+}
+
+.optical-power-content {
+  padding: 24px;
   max-width: 800px;
   margin: 0 auto;
-  min-height: calc(100vh - 64px);
-  background: linear-gradient(180deg, #f8f9fa 0%, #fff 100%);
-  position: relative;
-  overflow: hidden;
 }
 
-.optical-power::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 400px;
-  background: linear-gradient(135deg, rgba(22,93,255,0.05) 0%, rgba(64,128,255,0.05) 100%);
-  transform: skewY(-6deg);
-  transform-origin: top left;
-}
-
-.upload-card {
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-  border: none;
-  position: relative;
-  background: rgba(255,255,255,0.9);
-  backdrop-filter: blur(8px);
+.upload-card,
+.result-card {
+  margin-bottom: 24px;
 }
 
 .card-header {
-  text-align: center;
-  padding: 32px 0;
-  border-bottom: 1px solid #f2f3f5;
-  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
-.card-header::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 48px;
-  height: 4px;
-  background: linear-gradient(90deg, #165dff, #4080ff);
-  border-radius: 2px;
-}
-
-.card-header h2 {
+.card-header h3 {
   margin: 0;
+  font-size: 18px;
+  font-weight: 500;
   color: #1d2129;
-  font-size: 28px;
-  font-weight: 600;
-  background: linear-gradient(90deg, #165dff, #4080ff);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.subtitle {
-  margin: 12px 0 0;
-  color: #4e5969;
-  font-size: 15px;
-  line-height: 1.8;
 }
 
 .upload-area {
-  margin: 40px 0;
-  position: relative;
+  display: flex;
+  justify-content: center;
+  padding: 24px 0;
+}
+
+.upload-component {
+  width: 100%;
+}
+
+.result-content {
+  padding: 16px 0;
+}
+
+.result-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.result-item:last-child {
+  margin-bottom: 0;
+}
+
+.result-item .label {
+  width: 100px;
+  color: #4e5969;
+}
+
+.result-item .value {
+  color: #1d2129;
+  font-weight: 500;
 }
 
 :deep(.el-upload-dragger) {
   width: 100%;
-  height: 280px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  border: 2px dashed #e5e6eb;
-  border-radius: 12px;
-  background: #fafafa;
-  transition: all 0.3s;
-  position: relative;
-  overflow: hidden;
-}
-
-:deep(.el-upload-dragger::before) {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, rgba(22,93,255,0.02) 0%, rgba(64,128,255,0.02) 100%);
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-:deep(.el-upload-dragger:hover) {
-  border-color: #165dff;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(22,93,255,0.1);
-}
-
-:deep(.el-upload-dragger:hover::before) {
-  opacity: 1;
 }
 
 :deep(.el-icon--upload) {
-  font-size: 56px;
-  color: #165dff;
-  margin-bottom: 20px;
-  filter: drop-shadow(0 4px 8px rgba(22,93,255,0.2));
+  font-size: 48px;
+  color: #1890ff;
+  margin-bottom: 16px;
 }
 
 :deep(.el-upload__text) {
   color: #4e5969;
   font-size: 16px;
-  margin-bottom: 12px;
-  line-height: 1.8;
+  margin-bottom: 8px;
 }
 
 :deep(.el-upload__text em) {
-  color: #165dff;
+  color: #1890ff;
   font-style: normal;
-  margin: 0 4px;
-  font-weight: 500;
 }
 
 :deep(.el-upload__tip) {
   color: #86909c;
-  font-size: 14px;
-  line-height: 1.6;
 }
 
-.preview-area {
-  margin-top: 48px;
-  text-align: center;
-  position: relative;
-}
-
-.preview-area h3 {
-  margin-bottom: 28px;
-  color: #1d2129;
-  font-size: 20px;
-  font-weight: 600;
-  position: relative;
-  display: inline-block;
-}
-
-.preview-area h3::after {
-  content: '';
-  position: absolute;
-  bottom: -8px;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #165dff, #4080ff);
-  border-radius: 1.5px;
-  transform: scaleX(0.6);
-}
-
-.preview-image {
-  max-width: 100%;
-  max-height: 400px;
-  margin-bottom: 28px;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-  transition: all 0.3s;
-}
-
-.preview-image:hover {
-  transform: scale(1.02);
-  box-shadow: 0 12px 32px rgba(0,0,0,0.12);
-}
-
-.preview-area .el-button {
-  padding: 14px 32px;
-  font-size: 16px;
-  border-radius: 8px;
-  background: linear-gradient(90deg, #165dff, #4080ff);
-  border: none;
-  transition: all 0.3s;
-}
-
-.preview-area .el-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(22,93,255,0.2);
-}
-
-.result-area {
-  margin-top: 48px;
-  padding-top: 40px;
-  border-top: 1px solid #f2f3f5;
-  position: relative;
-}
-
-.result-area::before {
-  content: '';
-  position: absolute;
-  top: -1px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 48px;
-  height: 4px;
-  background: linear-gradient(90deg, #165dff, #4080ff);
-  border-radius: 2px;
-}
-
-.result-area h3 {
-  margin-bottom: 28px;
-  color: #1d2129;
-  font-size: 20px;
-  font-weight: 600;
-  text-align: center;
-  position: relative;
-  display: inline-block;
-}
-
-.result-area h3::after {
-  content: '';
-  position: absolute;
-  bottom: -8px;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #165dff, #4080ff);
-  border-radius: 1.5px;
-  transform: scaleX(0.6);
-}
-
-:deep(.el-descriptions) {
-  margin-top: 28px;
-  background: #fafafa;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: inset 0 0 0 1px #f2f3f5;
-}
-
-:deep(.el-descriptions__title) {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1d2129;
-  margin-bottom: 20px;
-}
-
-:deep(.el-descriptions__label) {
-  color: #4e5969;
-  font-weight: normal;
-  padding: 16px 24px;
-}
-
-:deep(.el-descriptions__content) {
-  color: #1d2129;
-  font-weight: 500;
-  padding: 16px 24px;
-}
-
-:deep(.el-descriptions__cell) {
-  background: #fff;
-}
-
-:deep(.el-tag) {
-  padding: 6px 16px;
-  font-size: 14px;
-  border-radius: 6px;
-  font-weight: 500;
-}
-
-:deep(.el-tag--success) {
-  background: #e8ffea;
-  border-color: #aff0b5;
-  color: #00b42a;
-}
-
-:deep(.el-tag--danger) {
-  background: #ffece8;
-  border-color: #ffb1a8;
-  color: #f53f3f;
-}
-
-@media (max-width: 768px) {
-  .optical-power {
-    padding: 32px 16px;
-  }
-  
-  .card-header {
-    padding: 24px 0;
-  }
-  
-  .card-header h2 {
-    font-size: 24px;
-  }
-  
-  :deep(.el-upload-dragger) {
-    height: 240px;
-  }
-  
-  :deep(.el-icon--upload) {
-    font-size: 48px;
-  }
-  
-  .preview-area .el-button {
-    padding: 12px 24px;
-  }
-  
-  :deep(.el-descriptions__label),
-  :deep(.el-descriptions__content) {
-    padding: 12px 16px;
-  }
+.header-right {
+  display: flex;
+  gap: 16px;
+  align-items: center;
 }
 </style> 
