@@ -4,7 +4,7 @@
       <el-header>
         <div class="header-content">
           <div class="header-left">
-            <h1>CMHK Validate System</h1>
+            <h1>装维质检系统</h1>
             <el-menu mode="horizontal" :router="true" v-if="isLoggedIn">
               <el-menu-item index="/">首页</el-menu-item>
               <el-menu-item index="/speed-test">速度测试</el-menu-item>
@@ -81,7 +81,7 @@
             
             <!-- 未登录显示欢迎信息 -->
             <el-card class="welcome-card" v-else>
-              <h2>欢迎使用 CMHK Validate System</h2>
+              <h2>欢迎使用装维质检系统</h2>
               <p>这是一个用于验证和管理的系统平台。</p>
               <div class="action-buttons">
                 <el-button type="primary" @click="$router.push('/login')">立即登录</el-button>
