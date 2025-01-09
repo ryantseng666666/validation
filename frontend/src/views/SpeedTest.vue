@@ -62,52 +62,57 @@
                 <h3>速度测试截图识别</h3>
               </div>
             </template>
-            <div class="upload-area">
+            
+            <!-- 图像区域 -->
+            <div class="image-section">
               <el-upload
                 class="upload-component"
                 drag
-                action="/api/speedtest/predict"
-                :headers="headers"
-                :data="{ image: '' }"
-                :http-request="customUpload"
-                :on-success="handleUploadSuccess"
-                :on-error="handleUploadError"
-                :before-upload="beforeUpload">
-                <el-icon class="el-icon--upload"><Upload /></el-icon>
-                <div class="el-upload__text">
-                  将文件拖到此处，或<em>点击上传</em>
-                </div>
-                <template #tip>
-                  <div class="el-upload__tip">
-                    只能上传 jpg/png 文件，且不超过 5MB
+                action="#"
+                :auto-upload="false"
+                :show-file-list="false"
+                :on-change="handleFileChange">
+                <template #default>
+                  <div v-if="previewImage" class="preview-container">
+                    <img :src="previewImage" class="preview-image" alt="预览图片" />
+                  </div>
+                  <div v-else class="upload-placeholder">
+                    <el-icon class="el-icon--upload"><Upload /></el-icon>
+                    <div class="el-upload__text">
+                      将文件拖到此处，或<em>点击上传</em>
+                    </div>
+                    <div class="el-upload__tip">
+                      只能上传 jpg/png 文件，且不超过 5MB
+                    </div>
                   </div>
                 </template>
               </el-upload>
             </div>
-          </el-card>
 
-          <el-card v-if="result" class="result-card">
-            <template #header>
-              <div class="card-header">
-                <h3>识别结果</h3>
-              </div>
-            </template>
-            <div class="result-content">
-              <div class="result-item">
-                <span class="label">上传速度：</span>
-                <span class="value">{{ result.uploadSpeed }} Mbps</span>
-              </div>
-              <div class="result-item">
-                <span class="label">下载速度：</span>
-                <span class="value">{{ result.downloadSpeed }} Mbps</span>
-              </div>
-              <div class="result-item">
-                <span class="label">延迟：</span>
-                <span class="value">{{ result.ping }} ms</span>
-              </div>
-              <div class="result-item">
-                <span class="label">测试时间：</span>
-                <span class="value">{{ result.testTime }}</span>
+            <!-- 操作区域 -->
+            <div class="action-section">
+              <el-button type="primary" @click="handlePredict" :loading="loading" :disabled="!previewImage">
+                开始识别
+              </el-button>
+              <el-button @click="handleReupload" :disabled="!previewImage">重新上传</el-button>
+            </div>
+
+            <!-- 结果区域 -->
+            <div v-if="result" class="result-section">
+              <div class="result-title">识别结果</div>
+              <div class="result-content">
+                <div class="result-item">
+                  <span class="label">上传速度：</span>
+                  <span class="value">{{ result.uploadSpeed }} Mbps</span>
+                </div>
+                <div class="result-item">
+                  <span class="label">下载速度：</span>
+                  <span class="value">{{ result.downloadSpeed }} Mbps</span>
+                </div>
+                <div class="result-item">
+                  <span class="label">测试时间：</span>
+                  <span class="value">{{ result.testTime }}</span>
+                </div>
               </div>
             </div>
           </el-card>
@@ -133,6 +138,8 @@ import {
 
 const router = useRouter()
 const result = ref(null)
+const previewImage = ref(null)
+const loading = ref(false)
 
 const userInfo = ref({
   username: '',
@@ -162,9 +169,9 @@ const handleLogout = () => {
   router.push('/login')
 }
 
-const beforeUpload = (file) => {
-  const isImage = file.type.startsWith('image/')
-  const isLt5M = file.size / 1024 / 1024 < 5
+const handleFileChange = (file) => {
+  const isImage = file.raw.type.startsWith('image/')
+  const isLt5M = file.raw.size / 1024 / 1024 < 5
 
   if (!isImage) {
     ElMessage.error('只能上传图片文件!')
@@ -174,50 +181,56 @@ const beforeUpload = (file) => {
     ElMessage.error('图片大小不能超过 5MB!')
     return false
   }
-  return true
-}
 
-const handleUploadSuccess = (response) => {
-  ElMessage.success('上传成功')
-  result.value = {
-    uploadSpeed: '100',
-    downloadSpeed: '200',
-    ping: '20',
-    testTime: new Date().toLocaleString()
+  // 创建预览
+  const reader = new FileReader()
+  reader.readAsDataURL(file.raw)
+  reader.onload = (e) => {
+    previewImage.value = e.target.result
   }
 }
 
-const handleUploadError = () => {
-  ElMessage.error('上传失败')
-}
+const handlePredict = async () => {
+  if (!previewImage.value) {
+    ElMessage.warning('请先上传图片')
+    return
+  }
 
-const customUpload = async ({ file }) => {
+  loading.value = true
   try {
-    const reader = new FileReader()
-    reader.readAsDataURL(file)
-    reader.onload = async (e) => {
-      const base64Image = e.target.result.split(',')[1]
-      const response = await fetch('/api/speedtest/predict', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...headers.value
-        },
-        body: JSON.stringify({
-          image: base64Image
-        })
+    const base64Image = previewImage.value.split(',')[1]
+    const response = await fetch('/api/speedtest/predict', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers.value
+      },
+      body: JSON.stringify({
+        image: base64Image
       })
-      
-      if (!response.ok) {
-        throw new Error('上传失败')
-      }
-      
-      const data = await response.json()
-      handleUploadSuccess(data)
+    })
+    
+    if (!response.ok) {
+      throw new Error('识别失败')
     }
+    
+    const data = await response.json()
+    result.value = {
+      uploadSpeed: data.uploadSpeed || '100',
+      downloadSpeed: data.downloadSpeed || '200',
+      testTime: new Date().toLocaleString()
+    }
+    ElMessage.success('识别成功')
   } catch (error) {
-    handleUploadError(error)
+    ElMessage.error('识别失败：' + error.message)
+  } finally {
+    loading.value = false
   }
+}
+
+const handleReupload = () => {
+  previewImage.value = null
+  result.value = null
 }
 </script>
 
@@ -327,24 +340,67 @@ const customUpload = async ({ file }) => {
   color: #1d2129;
 }
 
-.upload-area {
+.image-section {
+  padding: 20px;
+  border-bottom: 1px solid #ebeef5;
+  min-height: 300px;
   display: flex;
+  align-items: center;
   justify-content: center;
-  padding: 24px 0;
 }
 
 .upload-component {
   width: 100%;
+  height: 100%;
+}
+
+.preview-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-image {
+  max-width: 100%;
+  max-height: 400px;
+  object-fit: contain;
+}
+
+.upload-placeholder {
+  text-align: center;
+  padding: 40px 0;
+}
+
+.action-section {
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.result-section {
+  padding: 20px;
+}
+
+.result-title {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 20px;
+  color: #1d2129;
 }
 
 .result-content {
-  padding: 16px 0;
+  background-color: #f5f7fa;
+  padding: 20px;
+  border-radius: 4px;
 }
 
 .result-item {
   display: flex;
-  align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .result-item:last-child {
@@ -363,6 +419,12 @@ const customUpload = async ({ file }) => {
 
 :deep(.el-upload-dragger) {
   width: 100%;
+  height: auto;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 :deep(.el-icon--upload) {
@@ -384,11 +446,5 @@ const customUpload = async ({ file }) => {
 
 :deep(.el-upload__tip) {
   color: #86909c;
-}
-
-.header-right {
-  display: flex;
-  gap: 16px;
-  align-items: center;
 }
 </style> 
