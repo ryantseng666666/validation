@@ -102,8 +102,8 @@ public class ZhipuSNCodeRecognitionService implements SNCodeRecognitionService {
         functionParameters.put("required", Collections.singletonList("snCode"));
         
         Map<String, Object> function = new HashMap<>();
-        function.put("name", config.getSnCodeFunctionName());
-        function.put("description", config.getSnCodeFunctionDescription());
+        function.put("name", "extract_sn_code");
+        function.put("description", "从图片中提取SN码，返回JSON格式数据。必须包含：snCode（SN码，字符串类型）。");
         function.put("parameters", functionParameters);
         
         Map<String, Object> toolFunction = new HashMap<>();
