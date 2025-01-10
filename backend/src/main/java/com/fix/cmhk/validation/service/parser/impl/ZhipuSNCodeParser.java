@@ -36,34 +36,55 @@ public class ZhipuSNCodeParser implements ResponseParser<SNCodeResponse> {
                 throw new RuntimeException("API响应中缺少message数据");
             }
             
-            // 获取tool_calls数组
+            // 获取content内容
+            String content = message.path("content").asText();
+            
+            // 尝试从content中解析JSON
+            try {
+                JsonNode contentJson = objectMapper.readTree(content);
+                if (contentJson.has("snCode")) {
+                    String snCode = contentJson.get("snCode").asText();
+                    log.info("从content中成功解析SN码: {}", snCode);
+                    return SNCodeResponse.builder()
+                        .snCode(snCode)
+                        .build();
+                }
+            } catch (Exception e) {
+                log.debug("content不是JSON格式，尝试从tool_calls中解析");
+            }
+            
+            // 如果content中没有找到，尝试从tool_calls中解析
             JsonNode toolCalls = message.path("tool_calls");
-            if (toolCalls.isEmpty()) {
-                log.error("未找到tool_calls数据");
-                throw new RuntimeException("API响应中缺少tool_calls数据");
+            if (!toolCalls.isEmpty() && toolCalls.isArray()) {
+                JsonNode firstToolCall = toolCalls.get(0);
+                JsonNode function = firstToolCall.path("function");
+                JsonNode arguments = function.path("arguments");
+                
+                if (!arguments.isMissingNode()) {
+                    JsonNode functionResult = objectMapper.readTree(arguments.asText());
+                    if (functionResult.has("snCode")) {
+                        String snCode = functionResult.get("snCode").asText();
+                        log.info("从tool_calls中成功解析SN码: {}", snCode);
+                        return SNCodeResponse.builder()
+                            .snCode(snCode)
+                            .build();
+                    }
+                }
             }
             
-            // 获取第一个tool call的function参数
-            JsonNode function = toolCalls.get(0).path("function");
-            JsonNode arguments = function.path("arguments");
-            if (arguments.isMissingNode()) {
-                log.error("未找到arguments数据");
-                throw new RuntimeException("API响应中缺少arguments数据");
+            // 如果都没有找到，尝试从content文本中提取
+            if (!content.isEmpty()) {
+                String snCode = extractSNFromText(content);
+                if (snCode != null) {
+                    log.info("从content文本中成功提取SN码: {}", snCode);
+                    return SNCodeResponse.builder()
+                        .snCode(snCode)
+                        .build();
+                }
             }
             
-            // 解析JSON字符串为SNCodeResponse对象
-            JsonNode functionResult = objectMapper.readTree(arguments.asText());
-            String snCode = functionResult.path("snCode").asText();
-            
-            if (snCode.isEmpty()) {
-                log.error("未找到snCode数据");
-                throw new RuntimeException("API响应中缺少snCode数据");
-            }
-            
-            log.info("成功解析SN码识别结果: {}", snCode);
-            return SNCodeResponse.builder()
-                .snCode(snCode)
-                .build();
+            log.error("无法从响应中解析出SN码");
+            throw new RuntimeException("无法从响应中解析出SN码");
             
         } catch (Exception e) {
             log.error("解析智谱AI响应时发生异常: {}", e.getMessage(), e);
@@ -71,5 +92,32 @@ public class ZhipuSNCodeParser implements ResponseParser<SNCodeResponse> {
                 .snCode("Error: " + e.getMessage())
                 .build();
         }
+    }
+    
+    private String extractSNFromText(String content) {
+        // 尝试从文本中提取SN码
+        // 1. 尝试"SN:"格式
+        if (content.contains("SN:")) {
+            String[] parts = content.split("SN:");
+            if (parts.length > 1) {
+                String sn = parts[1].trim().split("\\s+")[0];
+                if (!sn.isEmpty()) {
+                    return sn;
+                }
+            }
+        }
+        
+        // 2. 尝试"SN："格式（中文冒号）
+        if (content.contains("SN：")) {
+            String[] parts = content.split("SN：");
+            if (parts.length > 1) {
+                String sn = parts[1].trim().split("\\s+")[0];
+                if (!sn.isEmpty()) {
+                    return sn;
+                }
+            }
+        }
+        
+        return null;
     }
 } 
