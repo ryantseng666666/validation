@@ -60,7 +60,7 @@ public class ZhipuAIPowerRecognitionService implements OpticalPowerRecognitionSe
         // 系统消息
         Map<String, Object> systemMessage = new HashMap<>();
         systemMessage.put("role", "system");
-        systemMessage.put("content", config.getOpticalPowerPrompt());
+        systemMessage.put("content", "你是一个专业的光功率测试数据识别助手。请仔细分析图片中的光功率值，要求：1. 光功率值一定是负数，以'-'号开头，后面跟数字，单位是dBm；2. 数值范围一定在-50到-15之间；3. 如果找到多个数值，请选择最可能是光功率的值；4. 请以JSON格式返回，格式为：{\"power\": 数字}；5. 数字请保留小数点后2位；6. 如果没有找到符合要求的值，返回{\"power\": null}");
         
         // 用户消息
         Map<String, Object> userMessage = new HashMap<>();
@@ -72,7 +72,7 @@ public class ZhipuAIPowerRecognitionService implements OpticalPowerRecognitionSe
         // 添加文本内容
         Map<String, Object> textContent = new HashMap<>();
         textContent.put("type", "text");
-        textContent.put("text", "请分析这张图片中的光功率值");
+        textContent.put("text", "请分析这张图片中的光功率值，并以JSON格式返回数据");
         contentList.add(textContent);
         
         // 添加图片内容
@@ -91,42 +91,12 @@ public class ZhipuAIPowerRecognitionService implements OpticalPowerRecognitionSe
         messages.add(systemMessage);
         messages.add(userMessage);
         
-        // 构建function定义
-        Map<String, Object> powerProperty = new HashMap<>();
-        powerProperty.put("type", "number");
-        powerProperty.put("description", "光功率值，单位dBm");
-        
-        Map<String, Object> properties = new HashMap<>();
-        properties.put("power", powerProperty);
-        
-        Map<String, Object> functionParameters = new HashMap<>();
-        functionParameters.put("type", "object");
-        functionParameters.put("properties", properties);
-        functionParameters.put("required", Collections.singletonList("power"));
-        
-        Map<String, Object> function = new HashMap<>();
-        function.put("name", config.getOpticalPowerFunctionName());
-        function.put("description", config.getOpticalPowerFunctionDescription());
-        function.put("parameters", functionParameters);
-        
-        Map<String, Object> toolFunction = new HashMap<>();
-        toolFunction.put("type", "function");
-        toolFunction.put("function", function);
-        
-        Map<String, Object> toolChoice = new HashMap<>();
-        toolChoice.put("type", "function");
-        Map<String, Object> functionChoice = new HashMap<>();
-        functionChoice.put("name", config.getOpticalPowerFunctionName());
-        toolChoice.put("function", functionChoice);
-        
         // 构建完整请求体
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("model", config.getModel());
         requestBody.put("messages", messages);
         requestBody.put("stream", false);
         requestBody.put("request_id", String.format("power_%d", System.currentTimeMillis()));
-        requestBody.put("tools", Collections.singletonList(toolFunction));
-        requestBody.put("tool_choice", toolChoice);
         
         return requestBody;
     }

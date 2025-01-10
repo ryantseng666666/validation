@@ -61,7 +61,7 @@ public class ZhipuSpeedTestRecognitionService implements SpeedTestRecognitionSer
         // 系统消息
         Map<String, Object> systemMessage = new HashMap<>();
         systemMessage.put("role", "system");
-        systemMessage.put("content", config.getSpeedTestPrompt());
+        systemMessage.put("content", "你是一个专业的网速测试结果识别助手。请分析图片中的网速测试结果，并以JSON格式返回以下数据：uploadSpeed（上传速度，数字类型，单位Mbps）、downloadSpeed（下载速度，数字类型，单位Mbps）、referenceId（参考编号，字符串类型）、ipAddress（IP地址，字符串类型）。");
         
         // 用户消息
         Map<String, Object> userMessage = new HashMap<>();
@@ -73,7 +73,7 @@ public class ZhipuSpeedTestRecognitionService implements SpeedTestRecognitionSer
         // 添加文本内容
         Map<String, Object> textContent = new HashMap<>();
         textContent.put("type", "text");
-        textContent.put("text", "请分析这张图片中的网速测试结果");
+        textContent.put("text", "请分析这张图片中的网速测试结果，并以JSON格式返回数据");
         contentList.add(textContent);
         
         // 添加图片内容
@@ -92,57 +92,12 @@ public class ZhipuSpeedTestRecognitionService implements SpeedTestRecognitionSer
         messages.add(systemMessage);
         messages.add(userMessage);
         
-        // 构建function定义
-        Map<String, Object> uploadSpeedProperty = new HashMap<>();
-        uploadSpeedProperty.put("type", "number");
-        uploadSpeedProperty.put("description", "上传速度，单位为Mbps");
-        
-        Map<String, Object> downloadSpeedProperty = new HashMap<>();
-        downloadSpeedProperty.put("type", "number");
-        downloadSpeedProperty.put("description", "下载速度，单位为Mbps");
-        
-        Map<String, Object> referenceIdProperty = new HashMap<>();
-        referenceIdProperty.put("type", "string");
-        referenceIdProperty.put("description", "参考编号");
-        
-        Map<String, Object> ipAddressProperty = new HashMap<>();
-        ipAddressProperty.put("type", "string");
-        ipAddressProperty.put("description", "IP地址");
-        
-        Map<String, Object> properties = new HashMap<>();
-        properties.put("uploadSpeed", uploadSpeedProperty);
-        properties.put("downloadSpeed", downloadSpeedProperty);
-        properties.put("referenceId", referenceIdProperty);
-        properties.put("ipAddress", ipAddressProperty);
-        
-        Map<String, Object> functionParameters = new HashMap<>();
-        functionParameters.put("type", "object");
-        functionParameters.put("properties", properties);
-        functionParameters.put("required", Arrays.asList("uploadSpeed", "downloadSpeed", "referenceId", "ipAddress"));
-        
-        Map<String, Object> function = new HashMap<>();
-        function.put("name", config.getSpeedTestFunctionName());
-        function.put("description", config.getSpeedTestFunctionDescription());
-        function.put("parameters", functionParameters);
-        
-        Map<String, Object> toolFunction = new HashMap<>();
-        toolFunction.put("type", "function");
-        toolFunction.put("function", function);
-        
-        Map<String, Object> toolChoice = new HashMap<>();
-        toolChoice.put("type", "function");
-        Map<String, Object> functionChoice = new HashMap<>();
-        functionChoice.put("name", config.getSpeedTestFunctionName());
-        toolChoice.put("function", functionChoice);
-        
         // 构建完整请求体
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("model", config.getModel());
         requestBody.put("messages", messages);
         requestBody.put("stream", false);
         requestBody.put("request_id", String.format("speedtest_%d", System.currentTimeMillis()));
-        requestBody.put("tools", Collections.singletonList(toolFunction));
-        requestBody.put("tool_choice", toolChoice);
         
         return requestBody;
     }

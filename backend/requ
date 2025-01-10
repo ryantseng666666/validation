@@ -1,0 +1,2 @@
+可以参考这个文档@https://bigmodel.cn/dev/howuse/functioncall ，实现/speed-test/predict    optical-power
+/predict对zhi pu 模型返回的json数据进行的function call解析后填充到response里面 
