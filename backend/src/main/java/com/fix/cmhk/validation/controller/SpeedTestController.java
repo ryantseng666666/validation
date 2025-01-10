@@ -16,7 +16,7 @@ public class SpeedTestController {
 
     @PostMapping("/predict")
     public ResponseEntity<SpeedTestResponse> predict(@RequestBody PredictionRequest request) {
-        SpeedTestResponse response = speedTestService.predictSpeed(request.getImage());
+        SpeedTestResponse response = speedTestService.predictSpeed(request.getBase64Image());
         return ResponseEntity.ok(response);
     }
 } 

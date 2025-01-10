@@ -5,12 +5,13 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class OpticalPowerResponse {
-    private Double opticalPower;
-    private boolean valid;
-    private String rawText;
+public class SNResponse {
+    private String sn;
+    private LocalDateTime recognitionTime;
 } 

@@ -1,14 +1,20 @@
 package com.fix.cmhk.validation.security;
 
 public class SecurityConstants {
-    public static final String TOKEN_PREFIX = "Bearer ";
-    public static final String HEADER_STRING = "Authorization";
+    public static final String LOGIN_URL = "/api/auth/login";
+    public static final String REGISTER_URL = "/api/auth/register";
+    public static final String VERIFY_CODE_URL = "/api/auth/verify-code";
+    public static final String SPEED_TEST_URL = "/api/speedtest/predict";
+    public static final String OPTICAL_POWER_URL = "/api/optical-power/predict";
+    public static final String SN_CODE_URL = "/api/sn-code/predict";
+    
     public static final String[] PUBLIC_URLS = {
-            "/api/auth/**",
-            "/api/optical-power/**",
-            "/api/sn-code/**",
-            "/api/speedtest/**",
-            "/error"
+        LOGIN_URL,
+        REGISTER_URL,
+        VERIFY_CODE_URL,
+        SPEED_TEST_URL,
+        OPTICAL_POWER_URL,
+        SN_CODE_URL
     };
 
     private SecurityConstants() {
