@@ -123,7 +123,7 @@ const handleRegister = async () => {
   
   await registerFormRef.value.validate((valid, fields) => {
     if (valid) {
-      request.post('/api/auth/register', registerForm)
+      request.post('/auth/register', registerForm)
         .then(response => {
           ElMessage.success('注册成功')
           router.push('/login')
@@ -141,7 +141,7 @@ const sendVerificationCode = () => {
     return
   }
   
-  request.post('/api/auth/verification-code/register', null, {
+  request.post('/auth/verification-code/register', null, {
     params: { email: registerForm.email }
   })
     .then(() => {

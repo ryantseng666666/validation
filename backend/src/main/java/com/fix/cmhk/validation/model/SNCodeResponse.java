@@ -10,5 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SNCodeResponse {
+    private boolean success;
+    private String message;
     private String snCode;
 } 

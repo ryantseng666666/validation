@@ -63,61 +63,36 @@
               </div>
             </template>
             
-            <!-- 图像区域 -->
-            <div class="image-section">
-              <el-upload
-                class="upload-component"
-                drag
-                action="#"
-                :auto-upload="false"
-                :show-file-list="false"
-                :on-change="handleFileChange">
-                <template #default>
-                  <div v-if="previewImage" class="preview-container">
-                    <img :src="previewImage" class="preview-image" alt="预览图片" />
-                  </div>
-                  <div v-else class="upload-placeholder">
-                    <el-icon class="el-icon--upload"><Upload /></el-icon>
-                    <div class="el-upload__text">
-                      将文件拖到此处，或<em>点击上传</em>
-                    </div>
-                    <div class="el-upload__tip">
-                      只能上传 jpg/png 文件，且不超过 5MB
-                    </div>
-                  </div>
-                </template>
-              </el-upload>
+            <!-- 上传预览区域 -->
+            <div class="preview-area" @click="triggerUpload" v-if="!previewImage">
+              <el-icon class="upload-icon"><Upload /></el-icon>
+              <div class="upload-text">点击或拖拽图片到此处上传</div>
+              <div class="upload-tip">支持 jpg/png 格式，大小不超过 5MB</div>
+            </div>
+            <div class="preview-area" v-else>
+              <img :src="previewImage" class="preview-image" alt="预览图片" />
             </div>
 
-            <!-- 操作区域 -->
-            <div class="action-section">
-              <el-button type="primary" @click="handlePredict" :loading="loading" :disabled="!previewImage">
+            <!-- 操作按钮区域 -->
+            <div class="action-area">
+              <el-button type="primary" @click="triggerUpload" :disabled="uploading">
+                {{ previewImage ? '重新上传' : '上传图片' }}
+              </el-button>
+              <el-button type="success" @click="handlePredict" :disabled="!previewImage || uploading">
                 开始识别
               </el-button>
-              <el-button @click="handleReupload" :disabled="!previewImage">重新上传</el-button>
             </div>
 
-            <!-- 结果区域 -->
-            <div v-if="result" class="result-section">
-              <div class="result-title">识别结果</div>
-              <div class="result-content">
-                <div class="result-item">
-                  <span class="label">SN码：</span>
-                  <span class="value">{{ result.snCode }}</span>
-                </div>
-                <div class="result-item">
-                  <span class="label">设备类型：</span>
-                  <span class="value">{{ result.deviceType }}</span>
-                </div>
-                <div class="result-item">
-                  <span class="label">生产日期：</span>
-                  <span class="value">{{ result.manufactureDate }}</span>
-                </div>
-                <div class="result-item">
-                  <span class="label">测试时间：</span>
-                  <span class="value">{{ result.testTime }}</span>
-                </div>
+            <!-- 结果展示区域 -->
+            <div class="result-area" v-if="result">
+              <div class="result-item">
+                <span class="label">SN码：</span>
+                <span class="value">{{ result.snCode }}</span>
               </div>
+              <div class="result-item">
+                <span class="label">识别时间：</span>
+                <span class="value">{{ new Date().toLocaleString() }}</span>
+              </div>    
             </div>
           </el-card>
         </div>
@@ -130,6 +105,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import request from '../utils/request'
 import {
   House,
   Document,
@@ -143,7 +119,6 @@ import {
 const router = useRouter()
 const result = ref(null)
 const previewImage = ref(null)
-const loading = ref(false)
 
 const userInfo = ref({
   username: '',
@@ -154,10 +129,6 @@ const userInfo = ref({
 const isLoggedIn = computed(() => {
   return localStorage.getItem('token') !== null
 })
-
-const headers = computed(() => ({
-  Authorization: `Bearer ${localStorage.getItem('token')}`
-}))
 
 onMounted(() => {
   const userStr = localStorage.getItem('user')
@@ -173,69 +144,65 @@ const handleLogout = () => {
   router.push('/login')
 }
 
-const handleFileChange = (file) => {
-  const isImage = file.raw.type.startsWith('image/')
-  const isLt5M = file.raw.size / 1024 / 1024 < 5
+const uploading = ref(false)
+const fileInput = ref(null)
+
+const triggerUpload = () => {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = 'image/*'
+  input.onchange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      handleFileUpload(file)
+    }
+  }
+  input.click()
+}
+
+const handleFileUpload = (file) => {
+  if (!file) return
+  
+  const isImage = file.type.startsWith('image/')
+  const isLt5M = file.size / 1024 / 1024 < 5
 
   if (!isImage) {
     ElMessage.error('只能上传图片文件!')
-    return false
+    return
   }
   if (!isLt5M) {
     ElMessage.error('图片大小不能超过 5MB!')
-    return false
+    return
   }
 
-  // 创建预览
   const reader = new FileReader()
-  reader.readAsDataURL(file.raw)
+  reader.readAsDataURL(file)
   reader.onload = (e) => {
     previewImage.value = e.target.result
   }
 }
 
 const handlePredict = async () => {
-  if (!previewImage.value) {
-    ElMessage.warning('请先上传图片')
-    return
-  }
-
-  loading.value = true
+  if (!previewImage.value) return
+  
+  uploading.value = true
   try {
     const base64Image = previewImage.value.split(',')[1]
-    const response = await fetch('/api/sn-code/predict', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...headers.value
-      },
-      body: JSON.stringify({
-        image: base64Image
-      })
+    console.log("发送的base64Image长度: ", base64Image.length)
+    
+    const data = await request.post('/sn-code/predict', {
+      base64Image: base64Image
     })
     
-    if (!response.ok) {
-      throw new Error('识别失败')
-    }
-    
-    const data = await response.json()
-    result.value = {
-      snCode: data.snCode || 'SN2024010900123',
-      deviceType: data.deviceType || 'ONT',
-      manufactureDate: data.manufactureDate || '2024-01-09',
-      testTime: new Date().toLocaleString()
-    }
+    console.log('识别结果:', data)
+    result.value = data
     ElMessage.success('识别成功')
   } catch (error) {
+    console.error('识别失败:', error)
     ElMessage.error('识别失败：' + error.message)
   } finally {
-    loading.value = false
+    uploading.value = false
   }
-}
-
-const handleReupload = () => {
-  previewImage.value = null
-  result.value = null
 }
 </script>
 
@@ -345,67 +312,24 @@ const handleReupload = () => {
   color: #1d2129;
 }
 
-.image-section {
-  padding: 20px;
-  border-bottom: 1px solid #ebeef5;
-  min-height: 300px;
+.upload-area {
   display: flex;
-  align-items: center;
   justify-content: center;
+  padding: 24px 0;
 }
 
 .upload-component {
   width: 100%;
-  height: 100%;
-}
-
-.preview-container {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.preview-image {
-  max-width: 100%;
-  max-height: 400px;
-  object-fit: contain;
-}
-
-.upload-placeholder {
-  text-align: center;
-  padding: 40px 0;
-}
-
-.action-section {
-  padding: 20px;
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  border-bottom: 1px solid #ebeef5;
-}
-
-.result-section {
-  padding: 20px;
-}
-
-.result-title {
-  font-size: 16px;
-  font-weight: 500;
-  margin-bottom: 20px;
-  color: #1d2129;
 }
 
 .result-content {
-  background-color: #f5f7fa;
-  padding: 20px;
-  border-radius: 4px;
+  padding: 16px 0;
 }
 
 .result-item {
   display: flex;
-  margin-bottom: 12px;
+  align-items: center;
+  margin-bottom: 16px;
 }
 
 .result-item:last-child {
@@ -424,12 +348,6 @@ const handleReupload = () => {
 
 :deep(.el-upload-dragger) {
   width: 100%;
-  height: auto;
-  min-height: 200px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
 }
 
 :deep(.el-icon--upload) {
@@ -451,5 +369,136 @@ const handleReupload = () => {
 
 :deep(.el-upload__tip) {
   color: #86909c;
+}
+
+.header-right {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.preview-image {
+  width: 100%;
+  max-height: 300px;
+  object-fit: contain;
+}
+
+.uploaded-image-container {
+  margin-bottom: 20px;
+  text-align: center;
+  background-color: #f5f7fa;
+  padding: 16px;
+  border-radius: 4px;
+}
+
+.uploaded-image {
+  max-width: 100%;
+  max-height: 400px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.result-details {
+  margin-top: 20px;
+  padding: 16px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+}
+
+:deep(.el-upload-dragger) {
+  width: 100%;
+  height: auto;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+:deep(.el-upload-dragger:hover) {
+  border-color: #1890ff;
+}
+
+:deep(.el-upload-dragger.is-dragover) {
+  background-color: rgba(24, 144, 255, 0.1);
+  border-color: #1890ff;
+}
+
+.preview-area {
+  width: 100%;
+  height: 300px;
+  border: 2px dashed #d9d9d9;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.3s;
+  margin-bottom: 20px;
+  background-color: #fafafa;
+}
+
+.preview-area:hover {
+  border-color: #1890ff;
+}
+
+.upload-icon {
+  font-size: 48px;
+  color: #8c8c8c;
+  margin-bottom: 16px;
+}
+
+.upload-text {
+  font-size: 16px;
+  color: #262626;
+  margin-bottom: 8px;
+}
+
+.upload-tip {
+  font-size: 14px;
+  color: #8c8c8c;
+}
+
+.preview-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.action-area {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.result-area {
+  background-color: #f5f7fa;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.result-item {
+  display: flex;
+  margin-bottom: 12px;
+}
+
+.result-item:last-child {
+  margin-bottom: 0;
+}
+
+.result-item .label {
+  width: 100px;
+  color: #4e5969;
+}
+
+.result-item .value {
+  color: #1d2129;
+  font-weight: 500;
+}
+
+.status-warning {
+  color: #ff4d4f;
 }
 </style> 

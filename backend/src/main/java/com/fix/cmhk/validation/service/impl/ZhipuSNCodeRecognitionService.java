@@ -1,149 +1,159 @@
 package com.fix.cmhk.validation.service.impl;
 
-import com.fix.cmhk.validation.config.ZhipuAIConfig;
 import com.fix.cmhk.validation.model.SNCodeResponse;
 import com.fix.cmhk.validation.service.SNCodeRecognitionService;
-import com.fix.cmhk.validation.service.parser.impl.ZhipuSNCodeParser;
-import com.fix.cmhk.validation.service.token.TokenGenerator;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
-import java.util.*;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
-@Slf4j
 @Service
-@RequiredArgsConstructor
 public class ZhipuSNCodeRecognitionService implements SNCodeRecognitionService {
-    
-    private final ZhipuAIConfig config;
-    private final RestTemplate restTemplate;
-    private final ObjectMapper objectMapper;
-    private final TokenGenerator tokenGenerator;
-    private final ZhipuSNCodeParser responseParser;
-    
+    private static final Logger logger = LoggerFactory.getLogger(ZhipuSNCodeRecognitionService.class);
+
+    @Value("${python.script.path:/Users/itadmin/cursor/validate_2.0/backend/scripts}")
+    private String scriptPath;
+
+    @Value("${python.command:python}")
+    private String pythonCommand;
+
+    /**
+     * 尝试查找可用的 Python 命令
+     */
+    private String findPythonCommand() {
+        List<String> possibleCommands = Arrays.asList("python3", "python", "python3.8", "python3.9", "python3.10", "python3.11");
+        
+        for (String cmd : possibleCommands) {
+            try {
+                Process process = new ProcessBuilder(cmd, "--version")
+                    .redirectErrorStream(true)
+                    .start();
+                
+                boolean completed = process.waitFor(5, TimeUnit.SECONDS);
+                if (completed && process.exitValue() == 0) {
+                    logger.info("找到可用的 Python 命令: {}", cmd);
+                    return cmd;
+                }
+            } catch (Exception e) {
+                logger.debug("Python 命令 {} 不可用", cmd);
+            }
+        }
+        
+        logger.warn("未找到可用的 Python 命令，将使用配置的默认命令: {}", pythonCommand);
+        return pythonCommand;
+    }
+
     @Override
     public SNCodeResponse recognizeSNCode(String base64Image) {
+        Path tempFile = null;
+        Process process = null;
+        
         try {
-            log.info("开始SN码识别流程...");
-            log.debug("输入图片base64长度: {}", base64Image.length());
+            // 创建临时文件存储 base64 图片数据
+            tempFile = Files.createTempFile("sn_image_", ".txt");
+            Files.write(tempFile, base64Image.getBytes(StandardCharsets.UTF_8));
+
+            // 检查脚本文件是否存在
+            Path scriptFilePath = Paths.get(scriptPath, "aliQwen_funcall_v2_SN.py");
+            if (!Files.exists(scriptFilePath)) {
+                logger.error("Python 脚本文件不存在: {}", scriptFilePath);
+                return SNCodeResponse.builder()
+                    .success(false)
+                    .message("Python 脚本文件不存在")
+                    .snCode("NA")
+                    .build();
+            }
+
+            // 查找可用的 Python 命令
+            String pythonCmd = findPythonCommand();
             
-            // 生成Token
-            String token = tokenGenerator.generateToken();
-            log.info("成功生成Token，准备调用API");
+            // 构建命令列表
+            List<String> command = new ArrayList<>();
+            command.add(pythonCmd);
+            command.add(scriptFilePath.toString());
+            command.add(tempFile.toString());
+
+            // 构建 ProcessBuilder
+            ProcessBuilder processBuilder = new ProcessBuilder(command);
+            processBuilder.directory(new File(scriptPath));
+            processBuilder.redirectErrorStream(true);
+
+            logger.info("开始执行 Python 脚本: {}", command);
+
+            // 执行命令
+            process = processBuilder.start();
+
+            // 读取输出
+            StringBuilder output = new StringBuilder();
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    output.append(line).append("\n");
+                }
+            }
+
+            // 等待进程完成，设置超时时间为 10 秒
+            boolean completed = process.waitFor(10, TimeUnit.SECONDS);
             
-            // 构建请求体
-            Map<String, Object> requestBody = buildRequestBody(base64Image);
-            log.debug("请求体构建完成: {}", requestBody);
-            
-            // 发送请求
-            ResponseEntity<String> response = sendRequest(token, requestBody);
-            log.info("收到API响应，状态码: {}", response.getStatusCode());
-            log.debug("API响应内容: {}", response.getBody());
-            
-            // 解析响应
-            return responseParser.parse(response);
-            
+            if (!completed) {
+                logger.error("Python 脚本执行超时");
+                process.destroyForcibly();
+                return SNCodeResponse.builder()
+                    .success(false)
+                    .message("识别超时")
+                    .snCode("NA")
+                    .build();
+            }
+
+            int exitCode = process.exitValue();
+            if (exitCode != 0) {
+                logger.error("Python 脚本执行失败，退出码: {}, 输出: {}", exitCode, output);
+                return SNCodeResponse.builder()
+                    .success(false)
+                    .message("识别失败: " + output)
+                    .snCode("NA")
+                    .build();
+            }
+
+            // 解析输出获取 SN 码
+            String snCode = output.toString().trim();
+            logger.info("识别到的 SN 码: {}", snCode);
+
+            return SNCodeResponse.builder()
+                .success(true)
+                .message("识别成功")
+                .snCode(snCode.isEmpty() ? "NA" : snCode)
+                .build();
+
         } catch (Exception e) {
-            log.error("SN码识别过程中发生异常: {}", e.getMessage(), e);
-            return createErrorResponse("Error: " + e.getMessage());
+            logger.error("执行 Python 脚本异常", e);
+            return SNCodeResponse.builder()
+                .success(false)
+                .message("识别异常: " + e.getMessage())
+                .snCode("NA")
+                .build();
+        } finally {
+            // 清理资源
+            try {
+                if (tempFile != null) {
+                    Files.deleteIfExists(tempFile);
+                }
+                if (process != null && process.isAlive()) {
+                    process.destroyForcibly();
+                }
+            } catch (Exception e) {
+                logger.warn("清理资源失败", e);
+            }
         }
-    }
-    
-    private Map<String, Object> buildRequestBody(String base64Image) {
-        // 系统消息
-        Map<String, Object> systemMessage = new HashMap<>();
-        systemMessage.put("role", "system");
-        systemMessage.put("content", config.getSnCodePrompt());
-        
-        // 用户消息
-        Map<String, Object> userMessage = new HashMap<>();
-        userMessage.put("role", "user");
-        
-        // 添加图片内容
-        List<Map<String, Object>> contentList = new ArrayList<>();
-        
-        // 添加文本内容
-        Map<String, Object> textContent = new HashMap<>();
-        textContent.put("type", "text");
-        textContent.put("text", "请分析这张图片中的SN码");
-        contentList.add(textContent);
-        
-        // 添加图片内容
-        Map<String, Object> imageUrl = new HashMap<>();
-        imageUrl.put("url", "data:image/jpeg;base64," + base64Image);
-        
-        Map<String, Object> imageContent = new HashMap<>();
-        imageContent.put("type", "image_url");
-        imageContent.put("image_url", imageUrl);
-        contentList.add(imageContent);
-        
-        userMessage.put("content", contentList);
-        
-        // 组装消息列表
-        List<Map<String, Object>> messages = new ArrayList<>();
-        messages.add(systemMessage);
-        messages.add(userMessage);
-        
-        // 构建function定义
-        Map<String, Object> snCodeProperty = new HashMap<>();
-        snCodeProperty.put("type", "string");
-        snCodeProperty.put("description", "SN码");
-        
-        Map<String, Object> properties = new HashMap<>();
-        properties.put("snCode", snCodeProperty);
-        
-        Map<String, Object> functionParameters = new HashMap<>();
-        functionParameters.put("type", "object");
-        functionParameters.put("properties", properties);
-        functionParameters.put("required", Collections.singletonList("snCode"));
-        
-        Map<String, Object> function = new HashMap<>();
-        function.put("name", "extract_sn_code");
-        function.put("description", "从图片中提取SN码，返回JSON格式数据。必须包含：snCode（SN码，字符串类型）。");
-        function.put("parameters", functionParameters);
-        
-        Map<String, Object> toolFunction = new HashMap<>();
-        toolFunction.put("type", "function");
-        toolFunction.put("function", function);
-        
-        // 构建完整请求体
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", config.getModel());
-        requestBody.put("messages", messages);
-        requestBody.put("stream", false);
-        requestBody.put("request_id", String.format("sncode_%d", System.currentTimeMillis()));
-        requestBody.put("tools", Collections.singletonList(toolFunction));
-        requestBody.put("tool_choice", toolFunction);
-        
-        return requestBody;
-    }
-    
-    private ResponseEntity<String> sendRequest(String token, Map<String, Object> requestBody) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("Authorization", token);
-        
-        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
-        
-        log.info("正在发送请求到API...");
-        log.debug("请求URL: {}", config.getApiUrl());
-        
-        return restTemplate.exchange(
-            config.getApiUrl(),
-            HttpMethod.POST,
-            requestEntity,
-            String.class
-        );
-    }
-    
-    private SNCodeResponse createErrorResponse(String message) {
-        log.debug("创建错误响应: {}", message);
-        return SNCodeResponse.builder()
-            .snCode(message)
-            .build();
     }
 } 

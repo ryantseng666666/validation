@@ -1,0 +1,32 @@
+zhipu:
+  ai:
+    api-key: 920333e3a5c84ca0b66fd9a634dd0154.QYaybUKaPl5IcM5c
+    api-url: ${ZHIPU_API_URL:https://open.bigmodel.cn/api/paas/v4/chat/completions}
+    model: ${ZHIPU_API_MODEL:glm-4v}
+
+    # 速度测试相关配置
+    speed-test-prompt: ${ZHIPU_SPEED_TEST_PROMPT:你是一个专业的网速测试结果识别助手。请分析图片中的网速测试结果，并返回JSON格式数据。必须包含以下字段：uploadSpeed（上传速度，数字类型）、downloadSpeed（下载速度、数字类型）、referenceId（参考编号，字符串类型）、ipAddress（IP地址，字符串类型）。}
+    speed-test-function-name: extract_speed_test_results
+    speed-test-function-description: 从图片中提取网速测试结果，返回JSON格式数据。必须包含：uploadSpeed（上传速度，数字类型）、downloadSpeed（下载速度，数字类型）、referenceId（参考编号，字符串类型）、ipAddress（IP地址，字符串类型）。
+    
+    # 光功率相关配置
+    optical-power-prompt: ${ZHIPU_OPTICAL_POWER_PROMPT:你是一个专业的光功率测试数据识别助手。请仔细分析图片中的光功率值。}
+    optical-power-function-name: extract_power_value
+    optical-power-function-description: 从图片中提取光功率值，要求：1. 光功率值一定是负数，以'-'号开头，后面跟数字，单位是dBm；2. 数值范围一定在-50到-15之间；3. 如果找到多个数值，请选择最可能是光功率的值；4. 数字保留小数点后2位。
+    
+    # SN码相关配置
+    sn-code-prompt: ${ZHIPU_SN_CODE_PROMPT:你是一个专业的SN码识别助手。请分析图片中的SN，并返回JSON格式数据。SN通常是一串字母和数字的组合，可能包含连字符。您应该始终遵循指令并输出一个有效的JSON对象。请根据指令使用指定的JSON对象结构}
+    sn-code-function-name: extract_sn_code
+    sn-code-function-description: 从图片中提取SN，返回JSON格式数据。必须包含：SN（SN，字符串类型））。
+
+qwen:
+  api:
+    key: sk-9a005b5e8ae14d85ac230b3dbad58da9
+
+# Python 相关配置
+python:
+  # Python 命令，如果不指定则自动查找
+  command: ${PYTHON_COMMAND:python}
+  # Python 脚本路径
+  script:
+    path: ${PYTHON_SCRIPT_PATH:/Users/itadmin/cursor/validate_2.0/backend/scripts}

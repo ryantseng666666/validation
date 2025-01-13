@@ -18,7 +18,7 @@ yarn-error.log*
 # Environment files
 .env
 .env.local
-.env.*
+.env.*.local
 !.env.example
 application-*.properties
 !application.properties
@@ -52,7 +52,4 @@ target/
 *.truststore
 secrets.yml
 secrets.yaml
-secrets.properties
-.env.development
-.env.production
-.env.test 
+secrets.properties 

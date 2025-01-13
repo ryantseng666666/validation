@@ -101,7 +101,7 @@ const handleLogin = async () => {
       }
       
       // 正常登录逻辑
-      request.post('/api/auth/login', loginForm)
+      request.post('/auth/login', loginForm)
         .then(response => {
           ElMessage.success('登录成功')
           localStorage.setItem('token', response.token)
@@ -118,7 +118,7 @@ const sendVerificationCode = () => {
     return
   }
   
-  request.post('/api/auth/verification-code/login', null, {
+  request.post('/auth/verification-code/login', null, {
     params: { email: loginForm.username }
   })
     .then(() => {
