@@ -2,7 +2,10 @@
   <div class="register-container">
     <el-card class="register-card">
       <template #header>
-        <h2>注册</h2>
+        <div class="logo-container">
+          <img src="../assets/cmhk.png" alt="CMHK Logo" class="logo-image">
+          <h2>注册</h2>
+        </div>
       </template>
       
       <el-form :model="registerForm" :rules="rules" ref="registerFormRef">
@@ -185,5 +188,16 @@ const sendVerificationCode = () => {
 
 .register-links a:hover {
   color: #66b1ff;
+}
+
+.logo-container {
+  text-align: center;
+  padding: 20px;
+}
+
+.logo-image {
+  width: 120px;
+  height: auto;
+  margin-bottom: 15px;
 }
 </style> 

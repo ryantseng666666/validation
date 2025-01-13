@@ -6,6 +6,7 @@
         <div class="header-content">
           <div class="header-left">
             <div class="logo">
+              <img src="../assets/cmhk.png" alt="CMHK Logo" class="nav-logo-image">
               <h2>装维质检系统</h2>
             </div>
             <el-menu
@@ -210,13 +211,20 @@ const handleLogout = () => {
 .logo {
   display: flex;
   align-items: center;
+  min-width: 200px;
 }
 
 .logo h2 {
-  color: #1d2129;
-  font-size: 20px;
   margin: 0;
-  font-weight: 600;
+  font-size: 18px;
+  white-space: nowrap;
+  color: #1d2129;
+}
+
+.nav-logo-image {
+  height: 32px;
+  width: auto;
+  margin-right: 8px;
 }
 
 .main-menu {

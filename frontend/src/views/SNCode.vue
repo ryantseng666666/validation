@@ -6,6 +6,7 @@
         <div class="header-content">
           <div class="header-left">
             <div class="logo">
+              <img src="../assets/cmhk.png" alt="CMHK Logo" class="nav-logo-image">
               <h2>装维质检系统</h2>
             </div>
             <el-menu
@@ -240,13 +241,13 @@ const handlePredict = async () => {
 .logo {
   display: flex;
   align-items: center;
+  min-width: 200px;
 }
 
 .logo h2 {
-  color: #1d2129;
-  font-size: 20px;
   margin: 0;
-  font-weight: 600;
+  font-size: 18px;
+  white-space: nowrap;
 }
 
 .main-menu {
@@ -500,5 +501,23 @@ const handlePredict = async () => {
 
 .status-warning {
   color: #ff4d4f;
+}
+
+.nav-logo-image {
+  height: 32px;
+  width: auto;
+  margin-right: 8px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  min-width: 200px;
+}
+
+.logo h2 {
+  margin: 0;
+  font-size: 18px;
+  white-space: nowrap;
 }
 </style> 

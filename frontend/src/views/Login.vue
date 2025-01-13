@@ -2,7 +2,10 @@
   <div class="login-container">
     <el-card class="login-card">
       <template #header>
-        <h2>登录</h2>
+        <div class="logo-container">
+          <img src="../assets/cmhk.png" alt="CMHK Logo" class="logo-image">
+          <h2>登录</h2>
+        </div>
       </template>
       
       <el-form :model="loginForm" :rules="rules" ref="loginFormRef">
@@ -172,5 +175,16 @@ const sendVerificationCode = () => {
 
 .forgot-password:hover {
   color: #606266;
+}
+
+.logo-container {
+  text-align: center;
+  padding: 20px;
+}
+
+.logo-image {
+  width: 120px;
+  height: auto;
+  margin-bottom: 15px;
 }
 </style> 
