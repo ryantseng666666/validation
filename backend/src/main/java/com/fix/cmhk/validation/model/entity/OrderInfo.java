@@ -166,4 +166,15 @@ public class OrderInfo {
     private String wifiPlan;
     private String sVlan;
     private String cVlan;
+    
+    private Integer speedTestRefNo;
+    
+    @Column(name = "speed_test_IP")
+    private String speedTestIP;
+    
+    @Column(name = "SN_code")
+    private String snCode;
+    
+    @Column(name = "ocr_contract_id")
+    private String ocrContractId;
 } 

@@ -9,7 +9,7 @@ public class SecurityConstants {
     public static final String SPEED_TEST_URL = "/api/speedtest/predict";
     public static final String OPTICAL_POWER_URL = "/api/optical-power/predict";
     public static final String SN_CODE_URL = "/api/sn-code/predict";
-    public static final String ORDER_URL = "/api/orders";
+    public static final String ORDER_URL = "/api/orders/**";
 
     public static final String[] PUBLIC_URLS = {
         LOGIN_URL,
@@ -20,7 +20,7 @@ public class SecurityConstants {
         SPEED_TEST_URL,
         OPTICAL_POWER_URL,
         SN_CODE_URL,
-            ORDER_URL
+        ORDER_URL
     };
 
     private SecurityConstants() {
