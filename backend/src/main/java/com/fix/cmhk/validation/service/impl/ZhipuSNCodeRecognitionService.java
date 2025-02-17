@@ -52,7 +52,7 @@ public class ZhipuSNCodeRecognitionService implements SNCodeRecognitionService {
         logger.warn("未找到可用的 Python 命令，将使用配置的默认命令: {}", pythonCommand);
         return pythonCommand;
     }
-
+    
     @Override
     public SNCodeResponse recognizeSNCode(String base64Image) {
         Path tempFile = null;
@@ -137,11 +137,11 @@ public class ZhipuSNCodeRecognitionService implements SNCodeRecognitionService {
 
         } catch (Exception e) {
             logger.error("执行 Python 脚本异常", e);
-            return SNCodeResponse.builder()
+        return SNCodeResponse.builder()
                 .success(false)
                 .message("识别异常: " + e.getMessage())
                 .snCode("NA")
-                .build();
+            .build();
         } finally {
             // 清理资源
             try {

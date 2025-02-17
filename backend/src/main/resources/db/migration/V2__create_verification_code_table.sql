@@ -1,3 +1,4 @@
+use cmhk_validation;
 CREATE TABLE verification_codes (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     code VARCHAR(6) NOT NULL,

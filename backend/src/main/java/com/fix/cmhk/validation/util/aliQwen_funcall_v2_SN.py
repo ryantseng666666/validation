@@ -28,9 +28,9 @@ def setup_logging():
 
 # API配置
 def setup_api():
-    dashscope.api_key = "sk-9a005b5e8ae14d85ac230b3dbad58da9"
+    dashscope.api_key = ""
     api_url = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
-    api_key = "sk-9a005b5e8ae14d85ac230b3dbad58da9"
+    api_key = ""
     return api_url, api_key
 
 # 工具定义
