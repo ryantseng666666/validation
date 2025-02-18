@@ -248,6 +248,25 @@
               </el-form>
             </div>
           </el-card>
+
+          <!-- 整体操作 -->
+          <el-card class="box-card">
+            <template #header>
+              <div class="card-header">
+                <h3>整体操作</h3>
+              </div>
+            </template>
+            <div class="form-container">
+              <div class="form-actions overall-actions">
+                <el-button type="primary" size="large" @click="handleOverallSubmit" :loading="submitting">
+                  <el-icon><Check /></el-icon>整体提交
+                </el-button>
+                <el-button type="warning" size="large" @click="handleOverallReset">
+                  <el-icon><RefreshLeft /></el-icon>全部重置
+                </el-button>
+              </div>
+            </div>
+          </el-card>
         </div>
       </el-main>
     </el-container>
@@ -257,7 +276,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import axios from 'axios'
 import {
   HomeFilled,
@@ -266,7 +285,9 @@ import {
   Lightning,
   Cpu,
   CaretBottom,
-  Picture
+  Picture,
+  Check,
+  RefreshLeft
 } from '@element-plus/icons-vue'
 import request from '../utils/request'
 
@@ -308,6 +329,13 @@ const isLoggedIn = computed(() => {
   return localStorage.getItem('token') !== null
 })
 
+// 保存初始数据用于重置
+const initialData = ref({
+  speed: null,
+  power: null,
+  contract: null
+})
+
 // 获取工单详情
 const fetchOrderDetails = async () => {
   try {
@@ -315,27 +343,37 @@ const fetchOrderDetails = async () => {
     orderData.value = response.data
 
     // 更新速度表单
-    speedForm.value = {
+    const speedData = {
       qcPassed: response.data.quality_status === 'Y',
-      uploadSpeed: Number(response.data.uploadSpeed) || Number(response.data.uploadSpeedManual) || null,
-      downloadSpeed: Number(response.data.downloadSpeed) || Number(response.data.downloadSpeedManual) || null,
+      uploadSpeed: Number(response.data.uploadSpeedManual) || Number(response.data.uploadSpeed) || null,
+      downloadSpeed: Number(response.data.downloadSpeedManual) || Number(response.data.downloadSpeed) || null,
       ipDuplicate: response.data.speedTestIP === 'N',
       refNoDuplicate: response.data.speedTestRefNo === 'N'
     }
+    speedForm.value = speedData
     
     // 更新功率表单
-    powerForm.value = {
+    const powerData = {
       qcPassed: response.data.optical_power_status === 'Y',
-      fmPower: Number(response.data.fmOutputPower) || Number(response.data.fmOutputPowerManual) || null,
-      outletPower: Number(response.data.odbPowerMeter) || Number(response.data.odbPowerMeterManual) || null
+      fmPower: Number(response.data.fmOutputPowerManual) || Number(response.data.fmOutputPower) || null,
+      outletPower: Number(response.data.odbPowerMeterManual) || Number(response.data.odbPowerMeter) || null
     }
+    powerForm.value = powerData
     
     // 更新合同表单
-    contractForm.value = {
+    const contractData = {
       qcPassed: response.data.contract_status === 'Y',
       contractNo: response.data.ocrContractId || '',
       oldSNCode: response.data.ontOldSn || '',
       newSNCode: response.data.ontNewSn || ''
+    }
+    contractForm.value = contractData
+
+    // 保存初始数据
+    initialData.value = {
+      speed: { ...speedData },
+      power: { ...powerData },
+      contract: { ...contractData }
     }
   } catch (error) {
     ElMessage.error('获取工单详情失败')
@@ -349,11 +387,13 @@ const handleSpeedSubmit = async () => {
   submitting.value = true
   
   try {
-    await axios.post(`http://localhost:8081/api/orders/${jobNo}`, {
+    const updatedData = {
+      ...orderData.value,
       quality_status: speedForm.value.qcPassed ? 'Y' : 'N',
       uploadSpeedManual: speedForm.value.uploadSpeed,
       downloadSpeedManual: speedForm.value.downloadSpeed
-    })
+    }
+    await axios.put(`http://localhost:8081/api/orders/${jobNo}`, updatedData)
     ElMessage.success('速度质检数据提交成功')
     fetchOrderDetails()
   } catch (error) {
@@ -370,11 +410,13 @@ const handlePowerSubmit = async () => {
   submitting.value = true
   
   try {
-    await axios.post(`http://localhost:8081/api/orders/${jobNo}`, {
+    const updatedData = {
+      ...orderData.value,
       optical_power_status: powerForm.value.qcPassed ? 'Y' : 'N',
       fmOutputPowerManual: powerForm.value.fmPower,
       odbPowerMeterManual: powerForm.value.outletPower
-    })
+    }
+    await axios.put(`http://localhost:8081/api/orders/${jobNo}`, updatedData)
     ElMessage.success('光功率质检数据提交成功')
     fetchOrderDetails()
   } catch (error) {
@@ -391,9 +433,11 @@ const handleContractSubmit = async () => {
   submitting.value = true
   
   try {
-    await axios.post(`http://localhost:8081/api/orders/${jobNo}`, {
+    const updatedData = {
+      ...orderData.value,
       contract_status: contractForm.value.qcPassed ? 'Y' : 'N'
-    })
+    }
+    await axios.put(`http://localhost:8081/api/orders/${jobNo}`, updatedData)
     ElMessage.success('合同质检数据提交成功')
     fetchOrderDetails()
   } catch (error) {
@@ -447,6 +491,76 @@ const formatDate = (date) => {
 const handleLogout = () => {
   localStorage.removeItem('token')
   router.push('/login')
+}
+
+// 整体提交函数
+const handleOverallSubmit = async () => {
+  if (submitting.value) return
+  
+  try {
+    await ElMessageBox.confirm(
+      '确定要提交所有修改吗？',
+      '提交确认',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+    
+    submitting.value = true
+    const updatedData = {
+      ...orderData.value,
+      // 速度测试数据
+      quality_status: speedForm.value.qcPassed ? 'Y' : 'N',
+      uploadSpeedManual: speedForm.value.uploadSpeed,
+      downloadSpeedManual: speedForm.value.downloadSpeed,
+      // 光功率数据
+      optical_power_status: powerForm.value.qcPassed ? 'Y' : 'N',
+      fmOutputPowerManual: powerForm.value.fmPower,
+      odbPowerMeterManual: powerForm.value.outletPower,
+      // 合同数据
+      contract_status: contractForm.value.qcPassed ? 'Y' : 'N'
+    }
+
+    await axios.put(`http://localhost:8081/api/orders/${jobNo}`, updatedData)
+    ElMessage.success('所有数据提交成功')
+    await fetchOrderDetails()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('提交失败')
+      console.error('Error submitting all data:', error)
+    }
+  } finally {
+    submitting.value = false
+  }
+}
+
+// 整体重置函数
+const handleOverallReset = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '确定要重置所有修改吗？这将恢复到页面加载时的初始状态。',
+      '重置确认',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+    
+    // 恢复所有表单到初始状态
+    speedForm.value = { ...initialData.value.speed }
+    powerForm.value = { ...initialData.value.power }
+    contractForm.value = { ...initialData.value.contract }
+    
+    ElMessage.success('已重置所有数据到初始状态')
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('重置失败')
+      console.error('Error resetting forms:', error)
+    }
+  }
 }
 
 onMounted(() => {
@@ -688,6 +802,19 @@ onMounted(() => {
 
 .custom-input {
   width: 300px;
+}
+
+.overall-actions {
+  padding: 20px 0;
+}
+
+.overall-actions .el-button {
+  min-width: 120px;
+  margin: 0 20px;
+}
+
+.overall-actions .el-icon {
+  margin-right: 8px;
 }
 
 @media (max-width: 768px) {

@@ -96,40 +96,46 @@
               </div>
             </template>
             
-            <el-table :data="workOrders" style="width: 100%" v-loading="loading">
-              <el-table-column prop="contractId" label="工单号" width="180" />
-              <el-table-column prop="customerOrderId" label="客户号" width="120" />
-              <el-table-column prop="jobNo" label="Job Number" width="180" />
-              <el-table-column prop="uploadSpeed" label="上传速度" width="120">
+            <el-table 
+              :data="workOrders" 
+              style="width: 100%" 
+              v-loading="loading"
+              :cell-style="{ 'white-space': 'nowrap' }"
+              :header-cell-style="{ 'white-space': 'nowrap' }"
+            >
+              <el-table-column prop="contractId" label="工单号" min-width="200" />
+              <el-table-column prop="customerOrderId" label="客户号" min-width="180" />
+              <el-table-column prop="jobNo" label="Job Number" min-width="200" />
+              <el-table-column prop="uploadSpeed" label="上传速度" min-width="150">
                 <template #default="scope">
-                  {{ scope.row.upload_speed || scope.row.upload_speed_manual || '-' }} Mbps
+                  {{ scope.row.uploadSpeed || scope.row.uploadSpeedManual || '-' }} Mbps
                 </template>
               </el-table-column>
-              <el-table-column prop="downloadSpeed" label="下载速度" width="120">
+              <el-table-column prop="downloadSpeed" label="下载速度" min-width="150">
                 <template #default="scope">
-                  {{ scope.row.download_speed || scope.row.download_speed_manual || '-' }} Mbps
+                  {{ scope.row.downloadSpeed || scope.row.downloadSpeedManual || '-' }} Mbps
                 </template>
               </el-table-column>
-              <el-table-column prop="speedTestRefNo" label="参考编号" width="180" />
-              <el-table-column prop="speedTestIP" label="IP地址" width="140" />
-              <el-table-column prop="fmOutputPower" label="楼层光功率" width="120">
+              <el-table-column prop="speedTestRefNo" label="参考编号" min-width="200" />
+              <el-table-column prop="speedTestIP" label="IP地址" min-width="160" />
+              <el-table-column prop="fmOutputPower" label="楼层光功率" min-width="150">
                 <template #default="scope">
-                  {{ scope.row.fm_output_power || scope.row.fm_output_power_manual || '-' }} dBm
+                  {{ scope.row.fmOutputPower || scope.row.fmOutputPowerManual  || '-' }} dBm
                 </template>
               </el-table-column>
-              <el-table-column prop="createDate" label="工单时间" width="180">
+              <el-table-column prop="createDate" label="工单时间" min-width="180">
                 <template #default="scope">
-                  {{ formatDate(scope.row.create_date) }}
+                  {{ formatDate(scope.row.createDate) }}
                 </template>
               </el-table-column>
-              <el-table-column prop="qualityStatus" label="质检状态" width="120">
+              <el-table-column prop="qualityStatus" label="质检状态" min-width="120">
                 <template #default="scope">
-                  <el-tag :type="scope.row.quality_status === 'Y' ? 'success' : 'warning'">
-                    {{ scope.row.quality_status === 'Y' ? '已通过' : '未通过' }}
+                  <el-tag :type="scope.row.qualityStatus === 'Y' ? 'success' : 'warning'">
+                    {{ scope.row.qualityStatus === 'Y' ? '已通过' : '未通过' }}
                   </el-tag>
                 </template>
               </el-table-column>
-              <el-table-column fixed="right" label="操作" width="120">
+              <el-table-column fixed="right" label="操作" min-width="100">
                 <template #default="scope">
                   <el-button
                     link
@@ -547,9 +553,9 @@ onMounted(() => {
 }
 
 .work-order-content {
-  padding: 24px;
-  max-width: 1400px;
+  max-width: 1800px;
   margin: 0 auto;
+  padding: 20px;
 }
 
 .search-card {
@@ -599,12 +605,13 @@ onMounted(() => {
   border-radius: 8px;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
   border: none;
+  margin-top: 20px;
 }
 
 .card-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   padding: 16px 24px;
   border-bottom: 1px solid #f0f0f0;
 }
@@ -617,23 +624,23 @@ onMounted(() => {
 }
 
 :deep(.el-table) {
-  font-size: 14px;
+  width: 100% !important;
+  overflow-x: auto;
 }
 
-:deep(.el-table th) {
-  background: #f7f8fa;
-  font-weight: 500;
-  color: #1d2129;
-  padding: 12px 0;
+:deep(.el-table__body),
+:deep(.el-table__header) {
+  min-width: 100%;
 }
 
-:deep(.el-table td) {
-  padding: 16px 0;
-  color: #4e5969;
+:deep(.el-table .cell) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-:deep(.el-table--enable-row-hover .el-table__body tr:hover > td) {
-  background: #f7f8fa;
+:deep(.el-table__body-wrapper) {
+  overflow-x: auto;
 }
 
 :deep(.el-button--text) {

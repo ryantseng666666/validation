@@ -243,6 +243,61 @@ CMHK装维质检系统是一个面向通信设备维护人员的智能识别平�
   - 预览区域：显示上传的图片
   - 操作按钮：上传/重新上传、开始识别
   - 结果展示区：显示SN码和识别时间
+#### 2.2.5 workOrder
+一、页面概述
+工单质检汇总页面主要用于展示和管理多个工单的质量检测数据。用户可以通过该页面快速查看各个工单的上传速度、下载速度等信息，并进行相应的操作。
+
+二、页面布局
+页面采用简洁明了的单列表格布局，可参考这个图片/Users/itadmin/cursor/validate_2.0/workOrder.jpeg。主要包括以下几个部分：
+
+标题栏：显示“工单质检汇总”作为页面标题。
+搜索框：位于标题栏下方，用于输入关键词进行模糊查询。
+工单列表：以表格形式呈现，包含以下列：
+工单号、客户号、JobNumber、上传速度、下载速度、参考编号、IP地址、楼层光功率、工单时间、质检状态（是或者否）、详情，点击可进入质检结果详情页面
+分页器：位于表格底部，用于切换不同的页面数据。
+三、字段显示与交互
+工单号：直接显示每个工单的唯一标识符。
+客户号：显示关联的客户编号。
+Job Number：显示作业编号。
+上传速度/下载速度：分别显示工单的上传和下载速度，单位为Mbps。
+点击该页面，默认查询上个月的工单（查询后段的这个接口“/api/orders/last-month/page”）
+#### 2.2.6 质检结果详情页面（qc_detail）
+1. 页面概述
+该页面首先调用“http://localhost:8081/api/orders/{{job_no}}”接口获取当前工单的质检信息。该页面用于记录和审核宽带及光功率的质量控制数据。主要功能包括输入与验证上传/下载速度、IP地址重复性检查、参考编号重复性检查以及合同号信息录入。
+
+2. 排版设计
+2.1 宽带速度质检（Broadband Speed QC）
+位置：页面顶部区域，可参考这个图片/Users/itadmin/cursor/validate_2.0/qc——detail.jpeg
+字段：
+质检是否通过（QC Passed）：是或者否
+上传速度（Upload Speed）：从工单详情中获得upload_speed，可编辑（更新到upload_speed_manual字段），单位为MB
+下载速度（Download Speed）：从工单详情中获得download_speed字段（更新到download_speed_manual），可编辑，单位为MB
+按钮：
+提交（Submit）: 灰色按钮，点击后提交当前输入的数据，调用/api/orders/{{jobNo}}更新数据；
+其他：
+IP 是否重复（Duplicate IP Check）：是或者否
+参考编号是否重复（Duplicate Reference Number Check）：是或者否
+
+2.2 光功率质量控制（Optical Power QC）
+位置：页面中部区域
+字段：
+FM 光功率（FM Optical Power）：从工单详情中获得(fm_output_power)，可编辑(更新到fm_output_power_manual字段)，单位为dBm
+插座光功率（Outlet Optical Power）：从工单详情中获得（odb_power_meter），可编辑（更新到odb_power_meter_manual字段），单位为dBm
+按钮：
+提交（Submit）：灰色按钮，点击后提交当前输入的数据，调用/api/orders/{{jobNo}}更新数据
+重置（Reset）：白色按钮，点击后清除所有输入框的内容
+2.3 合同号质量控制（Contract No QC）
+位置：页面底部区域
+字段：
+合同号（Contract No）：从工单详情中获得（contract_id）
+SN 编码（SN Code）：从工单详情中获得（ont_old_sn），新的SN编码（ont_new_sn）
+按钮：
+提交（Submit）：灰色按钮，点击后提交当前输入的数据，调用/api/orders/{{jobNo}}更新数据
+重置（Reset）：白色按钮，点击后清除所有输入框的内容
+3. 字段显示与交互
+重置按钮应能快速清除所有相关输入框中的内容，方便用户重新填写。
+4. 其他注意事项
+页面需保持简洁明了，确保重要信息易于获取和理解。
 
 ### 2.3 交互设计
 

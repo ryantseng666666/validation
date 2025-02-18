@@ -115,6 +115,8 @@ public class OrderInfoController {
         Page<OrderInfo> orders = orderInfoService.findLastYearOrders(pageable);
         return ResponseEntity.ok(orders);
     }
+    // Example curl command:
+    // curl -X GET "http://localhost:8080/api/orders/last-year/page?page=0&size=10" -H "accept: application/json"
 
     @GetMapping("/speed-test/ref/{refNo}")
     public ResponseEntity<OrderInfo> getBySpeedTestRefNo(@PathVariable Integer refNo) {
