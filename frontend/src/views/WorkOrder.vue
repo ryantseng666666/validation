@@ -100,8 +100,19 @@
               :data="workOrders" 
               style="width: 100%" 
               v-loading="loading"
-              :cell-style="{ 'white-space': 'nowrap' }"
-              :header-cell-style="{ 'white-space': 'nowrap' }"
+              :cell-style="{ 
+                'white-space': 'nowrap',
+                'text-align': 'center',
+                'vertical-align': 'middle'
+              }"
+              :header-cell-style="{ 
+                'white-space': 'nowrap',
+                'text-align': 'center',
+                'background-color': '#F5F7FA',
+                'color': '#303133',
+                'font-weight': 'bold',
+                'vertical-align': 'middle'
+              }"
             >
               <el-table-column prop="contractId" label="工单号" min-width="200" />
               <el-table-column prop="customerOrderId" label="客户号" min-width="180" />
@@ -120,7 +131,9 @@
               <el-table-column prop="speedTestIP" label="IP地址" min-width="160" />
               <el-table-column prop="fmOutputPower" label="楼层光功率" min-width="150">
                 <template #default="scope">
-                  {{ scope.row.fmOutputPower || scope.row.fmOutputPowerManual  || '-' }} dBm
+                  {{ (scope.row.fmOutputPower != null ? scope.row.fmOutputPower + ' dBm' : null) || 
+                     (scope.row.fmOutputPowerManual != null ? scope.row.fmOutputPowerManual + ' dBm' : null) || 
+                     '-' }}
                 </template>
               </el-table-column>
               <el-table-column prop="createDate" label="工单时间" min-width="180">
@@ -623,6 +636,7 @@ onMounted(() => {
   color: #1d2129;
 }
 
+/* 表格样式 */
 :deep(.el-table) {
   width: 100% !important;
   overflow-x: auto;
@@ -637,10 +651,29 @@ onMounted(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  padding: 12px 0;
+}
+
+:deep(.el-table__header-wrapper) {
+  th {
+    background-color: #F5F7FA !important;
+    font-weight: bold;
+  }
 }
 
 :deep(.el-table__body-wrapper) {
   overflow-x: auto;
+}
+
+:deep(.el-table__cell) {
+  padding: 8px 0;
+}
+
+:deep(.el-table .el-tag) {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 auto;
 }
 
 :deep(.el-button--text) {
