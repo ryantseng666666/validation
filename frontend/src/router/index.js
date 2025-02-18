@@ -7,6 +7,7 @@ import SpeedTest from '../views/SpeedTest.vue'
 import OpticalPower from '../views/OpticalPower.vue'
 import SNCode from '../views/SNCode.vue'
 import WorkOrder from '../views/WorkOrder.vue'
+import QCDetail from '../views/QCDetail.vue'
 
 const routes = [
   {
@@ -55,6 +56,12 @@ const routes = [
     path: '/work-order',
     name: 'WorkOrder',
     component: WorkOrder,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/qc-detail/:jobNo',
+    name: 'QCDetail',
+    component: QCDetail,
     meta: { requiresAuth: true }
   }
 ]

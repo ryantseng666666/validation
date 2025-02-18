@@ -97,22 +97,47 @@
             </template>
             
             <el-table :data="workOrders" style="width: 100%" v-loading="loading">
-              <el-table-column prop="orderNo" label="工单号" width="180" />
-              <el-table-column prop="type" label="工单类型" width="120" />
-              <el-table-column prop="status" label="状态" width="100">
+              <el-table-column prop="contractId" label="工单号" width="180" />
+              <el-table-column prop="customerOrderId" label="客户号" width="120" />
+              <el-table-column prop="jobNo" label="Job Number" width="180" />
+              <el-table-column prop="uploadSpeed" label="上传速度" width="120">
                 <template #default="scope">
-                  <el-tag :type="getStatusType(scope.row.status)">
-                    {{ getStatusText(scope.row.status) }}
+                  {{ scope.row.upload_speed || scope.row.upload_speed_manual || '-' }} Mbps
+                </template>
+              </el-table-column>
+              <el-table-column prop="downloadSpeed" label="下载速度" width="120">
+                <template #default="scope">
+                  {{ scope.row.download_speed || scope.row.download_speed_manual || '-' }} Mbps
+                </template>
+              </el-table-column>
+              <el-table-column prop="speedTestRefNo" label="参考编号" width="180" />
+              <el-table-column prop="speedTestIP" label="IP地址" width="140" />
+              <el-table-column prop="fmOutputPower" label="楼层光功率" width="120">
+                <template #default="scope">
+                  {{ scope.row.fm_output_power || scope.row.fm_output_power_manual || '-' }} dBm
+                </template>
+              </el-table-column>
+              <el-table-column prop="createDate" label="工单时间" width="180">
+                <template #default="scope">
+                  {{ formatDate(scope.row.create_date) }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="qualityStatus" label="质检状态" width="120">
+                <template #default="scope">
+                  <el-tag :type="scope.row.quality_status === 'Y' ? 'success' : 'warning'">
+                    {{ scope.row.quality_status === 'Y' ? '已通过' : '未通过' }}
                   </el-tag>
                 </template>
               </el-table-column>
-              <el-table-column prop="createTime" label="创建时间" width="180" />
-              <el-table-column prop="address" label="地址" />
-              <el-table-column label="操作" width="200" fixed="right">
+              <el-table-column fixed="right" label="操作" width="120">
                 <template #default="scope">
-                  <el-button link type="primary" @click="handleView(scope.row)">查看</el-button>
-                  <el-button link type="primary" @click="handleEdit(scope.row)">编辑</el-button>
-                  <el-button link type="danger" @click="handleDelete(scope.row)">删除</el-button>
+                  <el-button
+                    link
+                    type="primary"
+                    @click="handleViewDetail(scope.row.jobNo)"
+                  >
+                    详情
+                  </el-button>
                 </template>
               </el-table-column>
             </el-table>
@@ -197,9 +222,11 @@ import {
   Monitor,
   Lightning,
   Cpu,
-  CaretBottom
+  CaretBottom,
+  Search
 } from '@element-plus/icons-vue'
 import request from '../utils/request'
+import axios from 'axios'
 
 const router = useRouter()
 const userInfo = ref({
@@ -239,32 +266,7 @@ const pageSize = ref(10)
 const total = ref(0)
 
 // 表格数据
-const workOrders = ref([
-  {
-    orderNo: 'WO20240101001',
-    type: '安装',
-    status: 'pending',
-    createTime: '2024-01-01 10:00:00',
-    address: '广东省深圳市南山区科技园',
-    remark: '新装宽带'
-  },
-  {
-    orderNo: 'WO20240101002',
-    type: '维修',
-    status: 'processing',
-    createTime: '2024-01-01 11:00:00',
-    address: '广东省深圳市福田区CBD',
-    remark: '网络故障维修'
-  },
-  {
-    orderNo: 'WO20240101003',
-    type: '升级',
-    status: 'completed',
-    createTime: '2024-01-01 14:00:00',
-    address: '广东省深圳市龙岗区横岗街道',
-    remark: '百兆升级千兆'
-  }
-])
+const workOrders = ref([])
 const loading = ref(false)
 
 // 对话框相关
@@ -300,36 +302,32 @@ const rules = {
 const fetchWorkOrders = async () => {
   loading.value = true
   try {
-    // 模拟API延迟
-    await new Promise(resolve => setTimeout(resolve, 500))
-    
-    // 根据搜索条件过滤数据
-    const filteredOrders = workOrders.value.filter(order => {
-      const matchOrderNo = !searchForm.value.orderNo || 
-        order.orderNo.toLowerCase().includes(searchForm.value.orderNo.toLowerCase())
-      
-      const matchStatus = !searchForm.value.status || 
-        order.status === searchForm.value.status
-      
-      let matchDate = true
-      if (searchForm.value.dateRange?.length === 2) {
-        const orderDate = new Date(order.createTime.split(' ')[0])
-        const startDate = new Date(searchForm.value.dateRange[0])
-        const endDate = new Date(searchForm.value.dateRange[1])
-        matchDate = orderDate >= startDate && orderDate <= endDate
+    let response;
+    if (searchForm.value.orderNo || searchForm.value.status || searchForm.value.dateRange?.length) {
+      // If search criteria exist, use the paginated search endpoint
+      response = await request.get('http://localhost:8081/api/orders/last-month/page', {
+        params: {
+          page: currentPage.value - 1,
+          size: pageSize.value,
+          search: searchForm.value.orderNo || searchForm.value.status || searchForm.value.dateRange?.join(',')
+        }
+      })
+      workOrders.value = response.data.content
+      total.value = response.data.totalElements
+    } else {
+      // If no search criteria, fetch last year's orders
+      response = await axios.get('http://localhost:8081/api/orders/last-year')
+      if (Array.isArray(response.data)) {
+        workOrders.value = response.data
+        total.value = response.data.length
+      } else {
+        ElMessage.error('获取工单列表数据格式错误')
+        console.error('Invalid response format:', response.data)
       }
-      
-      return matchOrderNo && matchStatus && matchDate
-    })
-    
-    // 更新总数
-    total.value = filteredOrders.length
-    
-    // 模拟分页
-    const start = (currentPage.value - 1) * pageSize.value
-    const end = start + pageSize.value
-    workOrders.value = filteredOrders.slice(start, end)
-    
+    }
+  } catch (error) {
+    ElMessage.error('获取工单列表失败')
+    console.error('Error fetching work orders:', error)
   } finally {
     loading.value = false
   }
@@ -348,27 +346,8 @@ const resetSearch = () => {
     status: '',
     dateRange: []
   }
-  handleSearch()
-}
-
-// 状态标签类型
-const getStatusType = (status) => {
-  const types = {
-    pending: 'warning',
-    processing: 'primary',
-    completed: 'success'
-  }
-  return types[status] || 'info'
-}
-
-// 状态文本
-const getStatusText = (status) => {
-  const texts = {
-    pending: '待处理',
-    processing: '处理中',
-    completed: '已完成'
-  }
-  return texts[status] || status
+  currentPage.value = 1
+  fetchWorkOrders()
 }
 
 // 新建工单
@@ -385,10 +364,8 @@ const handleCreateOrder = () => {
 }
 
 // 查看工单
-const handleView = (row) => {
-  dialogType.value = 'view'
-  orderForm.value = { ...row }
-  dialogVisible.value = true
+const handleViewDetail = (jobNo) => {
+  router.push(`/qc-detail/${jobNo}`)
 }
 
 // 编辑工单
@@ -452,6 +429,17 @@ const handleCurrentChange = (val) => {
   fetchWorkOrders()
 }
 
+const formatDate = (date) => {
+  if (!date) return '-'
+  return new Date(date).toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
 onMounted(() => {
   fetchWorkOrders()
 })
@@ -460,31 +448,33 @@ onMounted(() => {
 <style scoped>
 .work-order {
   min-height: 100vh;
-  background-color: #f0f2f5;
+  background-color: #f8f9fa;
 }
 
 .header {
   background: #fff;
-  box-shadow: 0 1px 4px rgba(0,21,41,0.08);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
   position: fixed;
   width: 100%;
   z-index: 100;
   padding: 0;
+  height: 60px;
 }
 
 .header-content {
-  height: 64px;
+  height: 60px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  min-width: 1200px;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 32px;
   flex: 1;
 }
 
@@ -496,14 +486,16 @@ onMounted(() => {
 
 .logo h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #1d2129;
   white-space: nowrap;
 }
 
 .nav-logo-image {
-  height: 32px;
+  height: 28px;
   width: auto;
-  margin-right: 8px;
+  margin-right: 12px;
 }
 
 .main-menu {
@@ -519,17 +511,25 @@ onMounted(() => {
 :deep(.el-menu--horizontal > .el-menu-item) {
   display: flex;
   align-items: center;
-  gap: 4px;
-  height: 64px;
-  line-height: 64px;
+  gap: 6px;
+  height: 60px;
+  line-height: 60px;
   border-bottom: none;
-  padding: 0 16px;
+  padding: 0 20px;
+  font-size: 14px;
+  color: #4e5969;
 }
 
 :deep(.el-menu-item.is-active) {
-  color: #1890ff;
+  color: #165dff;
   background: transparent;
-  border-bottom: 2px solid #1890ff;
+  border-bottom: 2px solid #165dff;
+  font-weight: 500;
+}
+
+:deep(.el-menu-item:hover) {
+  color: #165dff;
+  background: rgba(22, 93, 255, 0.05);
 }
 
 .user-dropdown {
@@ -537,66 +537,176 @@ onMounted(() => {
   color: #1d2129;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  font-size: 14px;
 }
 
 .el-main {
-  padding-top: 84px;
-  min-height: 100vh;
+  padding-top: 80px;
+  min-height: calc(100vh - 60px);
 }
 
 .work-order-content {
   padding: 24px;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
-.work-order-card {
+.search-card {
   margin-bottom: 24px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+  border: none;
+}
+
+:deep(.el-card__body) {
+  padding: 24px;
+}
+
+.search-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+:deep(.el-form-item) {
+  margin-bottom: 0;
+}
+
+:deep(.el-form-item__label) {
+  color: #4e5969;
+  font-weight: normal;
+  font-size: 14px;
+}
+
+:deep(.el-input__inner) {
+  border-radius: 6px;
+  border-color: #e5e6eb;
+}
+
+:deep(.el-input__inner:hover) {
+  border-color: #c9cdd4;
+}
+
+:deep(.el-input__inner:focus) {
+  border-color: #165dff;
+}
+
+.work-order-card {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+  border: none;
 }
 
 .card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .card-header h3 {
   margin: 0;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 500;
   color: #1d2129;
 }
 
-.work-order-placeholder {
-  padding: 40px;
-  text-align: center;
+:deep(.el-table) {
+  font-size: 14px;
 }
 
-.header-right {
-  display: flex;
-  gap: 16px;
-  align-items: center;
+:deep(.el-table th) {
+  background: #f7f8fa;
+  font-weight: 500;
+  color: #1d2129;
+  padding: 12px 0;
 }
 
-.search-card {
-  margin-bottom: 24px;
+:deep(.el-table td) {
+  padding: 16px 0;
+  color: #4e5969;
 }
 
-.search-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
+:deep(.el-table--enable-row-hover .el-table__body tr:hover > td) {
+  background: #f7f8fa;
+}
+
+:deep(.el-button--text) {
+  color: #165dff;
+  padding: 0;
+}
+
+:deep(.el-button--text:hover) {
+  color: #4080ff;
 }
 
 .pagination-container {
   margin-top: 24px;
+  padding: 0 24px 24px;
   display: flex;
   justify-content: flex-end;
 }
 
+:deep(.el-pagination) {
+  font-weight: normal;
+}
+
+:deep(.el-pagination .el-select .el-input) {
+  width: 120px;
+}
+
+:deep(.el-pagination__total) {
+  color: #86909c;
+}
+
+:deep(.el-pagination .btn-prev),
+:deep(.el-pagination .btn-next) {
+  background: #fff;
+  border: 1px solid #e5e6eb;
+  border-radius: 6px;
+}
+
+:deep(.el-pagination .el-pager li) {
+  background: #fff;
+  border: 1px solid #e5e6eb;
+  border-radius: 6px;
+  font-weight: normal;
+}
+
+:deep(.el-pagination .el-pager li.active) {
+  background: #165dff;
+  color: #fff;
+  border-color: #165dff;
+  font-weight: 500;
+}
+
 :deep(.el-tag) {
-  text-align: center;
-  min-width: 80px;
+  border-radius: 4px;
+  padding: 0 8px;
+  height: 24px;
+  line-height: 22px;
+  font-size: 12px;
+  border: none;
+}
+
+:deep(.el-tag--success) {
+  background: rgba(0, 180, 42, 0.1);
+  color: #00b42a;
+}
+
+:deep(.el-tag--warning) {
+  background: rgba(255, 125, 0, 0.1);
+  color: #ff7d00;
+}
+
+.header-right {
+  display: flex;
+  gap: 24px;
+  align-items: center;
 }
 </style> 

@@ -1,0 +1,589 @@
+# CMHK 装维质检系统
+
+## 1. 系统概述
+
+# CMHK装维质检系统配置文档
+
+## 1. 配置信息
+
+### 1.1 数据库配置
+```yaml
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/cmhk_validation?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    username: root
+    password: 12345678
+    driver-class-name: com.mysql.cj.jdbc.Driver
+```
+
+
+### 1.3 服务端口配置
+```yaml
+# 前端端口
+frontend:
+  port: 8080
+
+# 后端端口
+backend:
+  port: 8081
+```
+
+## 2. 数据库建表语句
+
+### 2.1 用户相关表
+```sql
+-- 用户表
+CREATE TABLE users (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '用户ID',
+    username VARCHAR(50) NOT NULL UNIQUE COMMENT '用户名',
+    password VARCHAR(100) NOT NULL COMMENT '密码',
+    email VARCHAR(100) NOT NULL UNIQUE COMMENT '邮箱',
+    role VARCHAR(20) NOT NULL COMMENT '角色：ADMIN/USER',
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' COMMENT '状态',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
+
+-- 用户验证码表
+CREATE TABLE verification_codes (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '验证码ID',
+    email VARCHAR(100) NOT NULL COMMENT '邮箱',
+    code VARCHAR(6) NOT NULL COMMENT '验证码',
+    expire_time TIMESTAMP NOT NULL COMMENT '过期时间',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='验证码表';
+```
+
+### 2.2 工单相关表
+```sql
+-- 工单表
+create table order_info
+(
+    job_no                       varchar(64)  not null comment '工单唯一ID'
+        primary key,
+    contract_id                  varchar(64)  null,
+    title                        varchar(255) null,
+    order_type                   varchar(255) null comment '需要注明所有类型的值及含义：CSF=安装 CSA=维修 RC=重配 CSF(R)搬迁',
+    create_date                  datetime     null comment '下单时间',
+    customer_order_id            varchar(255) null comment 'CRM订单号',
+    customer_sub_order_id        varchar(255) null comment '子工单编号',
+    rate_plan                    varchar(255) null,
+    service_type                 varchar(255) null comment '需要注明所有类型的值及含义',
+    order_status                 varchar(255) null comment '需要注明所有类型的值及含义',
+    current_link                 varchar(255) null comment '工单当前所处环节; 需要注明所有类型的值及含义',
+    appointment_date             datetime     null comment '预约上门时间',
+    arrive_time                  datetime     null comment '装维师傅实际上门时间',
+    archive_time                 datetime     null comment '工单归档时间',
+    worker_id                    varchar(64)  null comment '装维师傅账号ID',
+    worker_name                  varchar(255) null comment '装维师傅名称',
+    worker_partner               varchar(255) null comment '装维师傅所属合作商',
+    result_code                  varchar(255) null comment '结果编码; 需要注明所有类型的值及含义',
+    result_code_desc             varchar(255) null comment '结果编码描述',
+    customer_id                  varchar(11)  null comment '客户编号',
+    customer                     varchar(255) null comment '客户联系人',
+    customer_contact             varchar(32)  null comment '客户联系电话',
+    customer_address             varchar(255) null comment '客户地址',
+    address_code                 varchar(255) null comment '安装地址编码',
+    area                         varchar(255) null comment '总区',
+    region                       varchar(255) null comment '地区',
+    district                     varchar(255) null comment '分区',
+    cmhk_building_id             varchar(32)  null comment '港府楼宇ID',
+    build_name                   varchar(255) null comment '屋苑/大厦名称',
+    business_type                varchar(255) null comment '业务类型',
+    task_category                varchar(255) null comment '任务类型',
+    task_sub_category            varchar(255) null comment '任务子类型',
+    bandwidth                    varchar(32)  null comment '频宽',
+    splitter_id                  varchar(32)  null,
+    splitting_ratio              varchar(255) null,
+    fm_id                        varchar(255) null,
+    fm_port_no                   varchar(32)  null,
+    fm_name                      varchar(255) null,
+    fm_carrier                   varchar(255) null comment 'FM所属承包商',
+    facility_type                varchar(255) null comment '楼宇布线类型',
+    pre_wiring                   varchar(255) null comment '楼宇是否预布线',
+    pon_port                     varchar(255) null comment 'PON端口',
+    olt_name                     varchar(255) null comment '名称应该是唯一的，可以去资管匹配',
+    olt_vendor                   varchar(255) null,
+    olt_type                     varchar(255) null,
+    olt_ip                       varchar(255) null comment 'OLT所属承包商',
+    olt_carrier                  varchar(255) null,
+    ont_vendor                   varchar(255) null,
+    ont_old_sn                   varchar(255) null comment '旧的ONT序列号',
+    ont_new_sn                   varchar(255) null comment '新的ONT序列号',
+    router_type                  varchar(255) null comment '路由类型',
+    router_sn                    varchar(255) null comment '路由序列号',
+    olt_tx_opt_power             varchar(255) null comment 'OLT发射光功率',
+    ont_rx_opt_power             varchar(255) null comment 'ONT接收光功率',
+    ont_tx_opt_power             varchar(255) null comment 'ONT发射光功率',
+    olt_rx_opt_power             varchar(255) null comment 'OLT接收光功率',
+    speed_test_result            varchar(255) null comment '测速图片地址url',
+    download_speed               varchar(255) null comment '下载速率',
+    download_speed_manual        varchar(10)  null comment '下载速率是否人工填写：Y/N',
+    upload_speed                 varchar(255) null comment '上传速率',
+    upload_speed_manual          varchar(10)  null comment '上传速率是否人工填写：Y/N',
+    fm_output_power_snapshot     varchar(255) null comment '楼层光功率照片地址url',
+    fm_output_power              varchar(255) null comment '楼层光功率数值',
+    fm_output_power_manual       varchar(10)  null comment '楼层光功率是否人工填写：Y/N',
+    odb_power_meter_snapshot     varchar(255) null comment '插座光功率照片',
+    odb_power_meter              varchar(255) null comment '插座光功率数值',
+    odb_power_meter_manual       varchar(10)  null comment '插座光功率是否人工填写：Y/N',
+    ont_led_status               text         null comment '三张图片:ONT正方面&工单合约编号
+地址URL，多个用英文逗号隔开',
+    ont_led_light_manual         varchar(10)  null comment 'LED状态灯状态是否人工填写：Y/N',
+    line_label_manual            varchar(10)  null comment '线路标签是否人工填写：Y/N',
+    ont_label_manual             varchar(10)  null comment 'ONT标签合同号是否人工填写：Y/N',
+    signed_uat                   varchar(255) null comment '上传的图片地址URL',
+    before_activity_photo        varchar(255) null comment '上传的图片地址URL',
+    floor_difference             varchar(20)  null comment 'FM与客户地址楼层差',
+    current_handler              varchar(255) null comment '工单当前处理人名称',
+    item_status                  varchar(10)  null comment '特殊项验收结果:Y-通过;N-未通过;todo-待验收;空值:不需要验收',
+    quality_status               varchar(255) null comment '质量验收结果:Y-人工通过;N-人工未通过;空值:不需要验收;autoSuccess-自动验收通过;autoFail-自动验收失败',
+    quality_remark               varchar(255) null comment '质量验收备注',
+    optical_power_auto__result   varchar(255) null,
+    optical_power_manual__result varchar(255) null,
+    speed_auto_result            varchar(255) null,
+    speed_manual_result          varchar(255) null,
+    is_charge                    varchar(10)  null comment '是否计算ITEM并收取费用:YES/NO，主要用于区分是否保修期内的维修单',
+    wifi_plan                    varchar(255) null comment '从大数据平台同步的WIFI Report结果中获取',
+    s_vlan                       varchar(64)  null,
+    c_vlan                       varchar(64)  null,
+    optical_power_auto_result    text         null,
+    optical_power_manual_result  text         null
+)
+    charset = utf8
+    row_format = DYNAMIC;
+
+
+
+### 2.3 识别记录表
+```sql
+-- 速度测试记录表
+CREATE TABLE speed_test_records (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '记录ID',
+    work_order_id BIGINT NOT NULL COMMENT '工单ID',
+    download_speed DECIMAL(10,2) NOT NULL COMMENT '下载速度(Mbps)',
+    upload_speed DECIMAL(10,2) NOT NULL COMMENT '上传速度(Mbps)',
+    reference_number VARCHAR(50) NOT NULL COMMENT '参考编号',
+    ip_address VARCHAR(50) NOT NULL COMMENT 'IP地址',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    FOREIGN KEY (work_order_id) REFERENCES work_orders(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='速度测试记录表';
+
+-- 光功率测试记录表
+CREATE TABLE optical_power_records (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '记录ID',
+    work_order_id BIGINT NOT NULL COMMENT '工单ID',
+    power_value DECIMAL(10,2) NOT NULL COMMENT '功率值(dBm)',
+    measurement_time TIMESTAMP NOT NULL COMMENT '测量时间',
+    device_model VARCHAR(100) NOT NULL COMMENT '设备型号',
+    status VARCHAR(20) NOT NULL COMMENT '状态',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    FOREIGN KEY (work_order_id) REFERENCES work_orders(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='光功率测试记录表';
+
+-- SN码记录表
+CREATE TABLE sn_code_records (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '记录ID',
+    work_order_id BIGINT NOT NULL COMMENT '工单ID',
+    sn_code VARCHAR(100) NOT NULL COMMENT 'SN码',
+    device_model VARCHAR(100) NOT NULL COMMENT '设备型号',
+    production_date DATE NOT NULL COMMENT '生产日期',
+    batch_number VARCHAR(50) NOT NULL COMMENT '批次号',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    FOREIGN KEY (work_order_id) REFERENCES work_orders(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='SN码记录表';
+```
+
+## 3. 图像识别Prompt配置
+
+### 3.1 速度测试识别
+```
+请识别该网速测试截图中的上传速度、下载速度、参考编号和IP地址。
+请以JSON格式返回，包含以下字段：
+{
+    "downloadSpeed": "下载速度，单位Mbps",
+    "uploadSpeed": "上传速度，单位Mbps",
+    "referenceNumber": "参考编号",
+    "ipAddress": "IP地址"
+}
+```
+
+### 3.2 光功率识别
+```
+请识别该光功率测试仪截图中的功率值、测量时间、设备型号等信息。
+请以JSON格式返回，包含以下字段：
+{
+    "powerValue": "功率值，单位dBm",
+    "measureTime": "测量时间",
+    "deviceModel": "设备型号",
+    "status": "状态，normal或abnormal"
+}
+```
+
+### 3.3 SN码识别
+```
+请识别该设备SN码照片中的序列号、设备型号、生产日期等信息。
+请以JSON格式返回，包含以下字段：
+{
+    "snCode": "SN码",
+    "deviceModel": "设备型号",
+    "productionDate": "生产日期",
+    "batchNumber": "批次号"
+}
+```
+
+## 4. 初始化数据
+
+### 4.1 创建管理员账户
+```sql
+-- 默认管理员账户 (密码: admin123)
+INSERT INTO users (username, password, email, role) 
+VALUES ('admin', '$2a$10$rDmFN6ZqJ/Y9E9BkDZ3j6.IqSj7sHX7EW3Qi2IYT9FyKVoHDaBj.2', 'admin@example.com', 'ADMIN');
+```
+
+## 5. 注意事项
+
+1. 数据库配置
+   - 生产环境请修改默认密码
+   - 建议开启数据库日志
+   - 定期备份数据
+
+2. API密钥安全
+   - 不要将API密钥提交到代码仓库
+   - 建议使用环境变量方式注入
+   - 定期更换API密钥
+
+3. 端口配置
+   - 确保端口未被占用
+   - 生产环境建议使用反向代理
+   - 配置适当的防火墙规则 
+
+### 1.1 产品简介
+CMHK装维质检系统是一个面向通信设备维护人员的智能识别平台，旨在提高工作效率和准确性。该系统能够通过AI技术自动识别速度测试截图、光功率读数和设备SN码，实现快速数据采集和质量检查。
+
+### 1.2 系统架构
+- 采用前后端分离架构
+- 前端端口：8080
+- 后端端口：8081
+- RESTful API接口规范
+- 统一的认证和授权中心
+
+## 2. 用户界面设计
+
+### 2.1 页面布局
+整体采用Element Plus的布局组件，包括：
+- 顶部导航栏（Header）：固定在顶部，包含logo和主导航菜单（首页、工单详情、速度测试识别、光功率识别、SN码识别、用户信息）
+- 主要内容区（Main）：自适应高度，包含各功能模块的具体内容
+- 统一的卡片式设计：使用`el-card`组件展示内容
+
+### 2.2 核心页面说明
+
+#### 2.2.1 登录页面
+- 布局：居中卡片式设计
+- 主要元素：
+  - 登录表单：用户名/密码输入框
+  - 验证码输入框
+  - 登录按钮
+  - 忘记密码链接
+
+#### 2.2.2 速度测试识别页面
+- 布局：单列布局
+- 主要元素：
+  - 图片上传区域：支持点击和拖拽上传
+  - 预览区域：显示上传的图片
+  - 操作按钮：上传/重新上传、开始识别
+  - 结果展示区：表格形式展示识别结果
+
+#### 2.2.3 光功率识别页面
+- 布局：单列布局
+- 主要元素：
+  - 图片上传区域：支持点击和拖拽上传
+  - 预览区域：显示上传的图片
+  - 操作按钮：上传/重新上传、开始识别
+  - 结果展示区：包含功率值和测量时间
+
+#### 2.2.4 SN码识别页面
+- 布局：单列布局
+- 主要元素：
+  - 图片上传区域：支持点击和拖拽上传
+  - 预览区域：显示上传的图片
+  - 操作按钮：上传/重新上传、开始识别
+  - 结果展示区：显示SN码和识别时间
+#### 2.2.5 workOrder
+一、页面概述
+工单质检汇总页面主要用于展示和管理多个工单的质量检测数据。用户可以通过该页面快速查看各个工单的上传速度、下载速度等信息，并进行相应的操作。
+
+二、页面布局
+页面采用简洁明了的单列表格布局，可参考这个图片/Users/itadmin/cursor/validate_2.0/workOrder.jpeg。主要包括以下几个部分：
+
+标题栏：显示“工单质检汇总”作为页面标题。
+搜索框：位于标题栏下方，用于输入关键词进行模糊查询。
+工单列表：以表格形式呈现，包含以下列：
+工单号、客户号、JobNumber、上传速度、下载速度、参考编号、IP地址、楼层光功率、工单时间、质检状态（是或者否）、详情，点击可进入质检结果详情页面
+分页器：位于表格底部，用于切换不同的页面数据。
+三、字段显示与交互
+工单号：直接显示每个工单的唯一标识符。
+客户号：显示关联的客户编号。
+Job Number：显示作业编号。
+上传速度/下载速度：分别显示工单的上传和下载速度，单位为Mbps。
+点击该页面，默认查询上个月的工单（查询后端的这个接口“/api/orders/last-month/page”）
+#### 2.2.6 质检结果详情页面（qc_detail）
+1. 页面概述
+该页面首先调用“http://localhost:8081/api/orders/{{job_no}}”接口获取当前工单的质检信息。该页面用于记录和审核宽带及光功率的质量控制数据。主要功能包括输入与验证上传/下载速度、IP地址重复性检查、参考编号重复性检查以及合同号信息录入。
+
+2. 排版设计
+整体布局可参考这个图片/Users/itadmin/cursor/validate_2.0/qc——detail.jpeg
+2.0 工单概况
+页面进入之后，默认调用PUT http://localhost:8081/api/orders/{{jobNo}}接口
+位置：页面顶部区域，可参考这个图片/Users/itadmin/cursor/validate_2.0/qc——detail.jpeg
+详情：
+- 工单号（contractId字段）
+- 客户号（customerOrderId）
+- JobNumber（jobNo）
+- 工单类型（orderType）
+- 工单创建时间（createDate）
+- 质检是否通过（qualityStatus 是或者否，是的话绿灯，否的话红灯）
+
+2.1 宽带速度质检（Broadband Speed QC）
+位置：页面工单概况的底下区域，
+左侧是字段：
+质检是否通过（QC Passed）：是或者否，是的话绿灯，否的话红灯
+上传速度（Upload Speed）：从工单详情中获得uploadSpeed，可编辑（更新到uploadSpeedManual字段），单位为MB
+下载速度（Download Speed）：从工单详情中获得downloadSpeed字段（更新到downloadSpeedManual），可编辑，单位为MB
+
+参考图：换行居中显示，从接口返回的speedTestResult字段取值
+
+按钮：
+提交（Submit）: 灰色按钮，点击后提交当前输入的数据，调用/api/orders/{{jobNo}}更新数据；
+其他：
+IP 是否重复（Duplicate IP Check）：是或者否
+参考编号是否重复（Duplicate Reference Number Check）：是或者否
+
+2.2 光功率质量控制（Optical Power QC）
+位置：页面中部区域
+详情：
+质检是否通过（QC Passed）：是或者否，是的话绿灯，否的话红灯
+FM 光功率（FM Optical Power）：从工单详情中获得fmOutputPower，可编辑(更新到fmOutputPowerManual字段)，单位为dBm
+
+参考图：换行居中显示，从接口返回的fmOutputPowerSnapshot字段取值
+
+插座光功率（Outlet Optical Power）：从工单详情中获得odbPowerMeter，可编辑（更新到odbPowerMeterManual字段），单位为dBm
+
+参考图：换行居中显示，从接口返回的odbPowerMeterSnapshot字段取值
+
+按钮：
+提交（Submit）：灰色按钮，点击后提交当前输入的数据，调用/api/orders/{{jobNo}}更新数据
+重置（Reset）：白色按钮，点击后清除所有输入框的内容
+
+2.3 合同号质量控制（Contract No QC）
+位置：页面底部区域
+详情：
+质检是否通过（QC Passed）：是或者否，是的话绿灯，否的话红灯
+合同号（Contract No）：从工单详情中获得（ocrContractId）
+
+参考图：换行居中显示，从接口返回的ontSnapshot字段取值
+
+SN编码（SN Code）：从工单详情中获得（ontOldSn）
+
+参考图：换行居中显示，从接口返回的snSnapshot字段取值
+
+按钮：
+提交（Submit）：灰色按钮，点击后提交当前输入的数据，调用/api/orders/{{jobNo}}更新数据
+重置（Reset）：白色按钮，点击后清除所有输入框的内容
+
+3. 字段显示与交互
+重置按钮应能快速清除所有相关输入框中的内容，方便用户重新填写。
+
+4. 其他注意事项
+页面需保持简洁明了，确保重要信息易于获取和理解。
+
+### 2.3 交互设计
+
+#### 2.3.1 图片上传交互
+1. 上传触发方式：
+   - 点击上传区域
+   - 拖拽图片到上传区域
+2. 上传限制：
+   - 文件类型：仅支持JPG、PNG
+   - 文件大小：≤5MB
+3. 上传反馈：
+   - 上传中：显示加载动画
+   - 上传成功：显示预览图
+   - 上传失败：显示错误提示
+
+#### 2.3.2 识别过程交互
+1. 识别触发：
+   - 条件：已上传图片
+   - 方式：点击"开始识别"按钮
+2. 识别过程：
+   - 显示加载动画
+   - 禁用操作按钮
+3. 识别结果：
+   - 成功：显示结构化数据
+   - 失败：显示错误提示，支持重试
+
+#### 2.3.3 响应式设计
+- 桌面端（≥1200px）：最大宽度800px，居中显示
+- 平板端（≥768px）：90%宽度，居中显示
+- 移动端（<768px）：全宽显示，适当调整内边距
+
+## 3. 功能模块说明
+
+### 3.1 核心功能模块
+
+#### 3.1.1 速度测试识别
+- 功能描述：通过上传网速测试截图，自动识别并提取上传速度、下载速度等信息
+- 关键指标：
+  - 支持图片格式：JPG、PNG
+  - 最大文件大小：5MB
+- 识别结果展示：
+  - 下载速度（Mbps）
+  - 上传速度（Mbps）
+  - 参考编号
+  - IP地址
+
+#### 3.1.2 光功率识别
+- 功能描述：通过上传光功率测试仪截图，自动识别并提取功率值等信息
+- 关键指标：
+  - 支持图片格式：JPG、PNG
+  - 最大文件大小：5MB
+- 识别结果展示：
+  - 功率值（dBm）
+  - 测量时间
+
+#### 3.1.3 SN码识别
+- 功能描述：通过上传设备SN码照片，自动识别并提取设备信息
+- 关键指标：
+  - 支持图片格式：JPG、PNG
+  - 最大文件大小：5MB
+- 识别结果展示：
+  - SN码
+  - 识别时间
+
+### 3.2 支撑功能模块
+
+#### 3.2.1 用户管理
+- 用户注册：邮箱验证
+- 用户登录：账号密码 + 验证码
+- 密码重置：邮箱验证
+- 用户角色管理
+- 登录状态维护
+
+#### 3.2.2 工单管理
+- 工单创建
+- 工单查询
+- 工单状态跟踪
+- 工单详情查看
+- 工单处理记录
+
+## 4. 技术实现
+
+### 4.1 技术栈
+前端技术栈：
+- Vue 3：核心框架
+- Vite：构建工具
+- Element Plus：UI组件库
+- Pinia：状态管理
+- Vue Router：路由管理
+- Axios：HTTP客户端
+
+后端技术栈：
+- Spring Boot：应用框架
+- Spring Security：安全框架
+- JWT：身份认证
+- MySQL：关系型数据库
+- Redis：缓存
+- Maven：依赖管理
+
+### 4.2 系统模块
+
+#### 4.2.1 前端模块
+```
+frontend/
+├── src/
+│   ├── assets/          # 静态资源
+│   ├── components/      # 公共组件
+│   ├── views/          # 页面组件
+│   ├── router/         # 路由配置
+│   ├── store/          # 状态管理
+│   ├── utils/          # 工具函数
+│   └── App.vue         # 根组件
+```
+
+#### 4.2.2 后端模块
+```
+backend/
+├── src/
+│   ├── main/
+│   │   ├── java/
+│   │   │   ├── controller/    # 控制器
+│   │   │   ├── service/       # 业务逻辑
+│   │   │   ├── model/         # 数据模型
+│   │   │   ├── repository/    # 数据访问
+│   │   │   ├── config/        # 配置类
+│   │   │   └── security/      # 安全相关
+│   │   └── resources/         # 配置文件
+│   └── test/                  # 测试代码
+```
+
+### 4.3 识别接口实现
+
+#### 4.3.1 技术实现原理
+所有识别接口都基于智谱GLM-4大语言模型实现，通过精心设计的prompt模板引导模型输出结构化的JSON数据。
+
+##### 速度测试识别流程
+```mermaid
+flowchart TD
+    A[前端上传图片] --> B[Base64编码]
+    B --> C[调用GLM-4模型]
+    C --> D{模型识别}
+    D -->|输入| E[Prompt模板]
+    D -->|输入| F[图片数据]
+    D -->|输出| G[JSON结果]
+    G --> H[Function Call解析]
+    H --> I[返回识别结果]
+    I --> J[前端展示]
+```
+
+##### 光功率识别流程
+```mermaid
+flowchart TD
+    A[前端上传图片] --> B[Base64编码]
+    B --> C[调用GLM-4模型]
+    C --> D{模型识别}
+    D -->|输入| E[Prompt模板]
+    D -->|输入| F[图片数据]
+    D -->|输出| G[JSON结果]
+    G --> H[Function Call解析]
+    H --> I[返回识别结果]
+    I --> J[前端展示]
+```
+
+##### SN码识别流程
+```mermaid
+flowchart TD
+    A[前端上传图片] --> B[Base64编码]
+    B --> C[调用GLM-4模型]
+    C --> D{模型识别}
+    D -->|输入| E[Prompt模板]
+    D -->|输入| F[图片数据]
+    D -->|输出| G[JSON结果]
+    G --> H[Function Call解析]
+    H --> I[返回识别结果]
+    I --> J[前端展示]
+```
+
+### 4.4 安全设计
+- 采用JWT进行身份认证
+- 数据库密码加密存储
+
+### 4.5 部署架构
+- 配置文件外部化管理
+
+## 5. 开发指南
+
+### 5.1 环境要求
+- Node.js >= 16
+- JDK >= 1.8
+- MySQL >= 5.7
+- Redis >= 6.0
