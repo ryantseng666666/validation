@@ -61,6 +61,14 @@
             </template>
             <div class="overview-content">
               <div class="overview-item">
+                <span class="label">整体质检是否通过：</span>
+                <span class="value">
+                  <el-tag :type="orderData.qualityStatus === 'Y' ? 'success' : 'warning'" class="status-tag">
+                    {{ orderData.qualityStatus === 'Y' ? '已通过' : '未通过' }}
+                  </el-tag>
+                </span>
+              </div>
+              <div class="overview-item">
                 <span class="label">工单号：</span>
                 <span class="value">{{ orderData.contractId || '-' }}</span>
               </div>
@@ -96,6 +104,9 @@
                   <div class="form-fields">
                     <el-form-item label="速度测试质检是否通过">
                       <el-switch v-model="speedForm.qcPassed" />
+                      <el-tag :type="speedForm.qcPassed ? 'success' : 'warning'" class="status-tag">
+                        {{ speedForm.qcPassed ? '已通过' : '未通过' }}
+                      </el-tag>
                     </el-form-item>
                     <el-form-item label="上传速度">
                       <div class="input-with-unit">
@@ -148,6 +159,9 @@
                   <div class="form-fields">
                     <el-form-item label="光功率质检是否通过">
                       <el-switch v-model="powerForm.qcPassed" />
+                      <el-tag :type="powerForm.qcPassed ? 'success' : 'warning'" class="status-tag">
+                        {{ powerForm.qcPassed ? '已通过' : '未通过' }}
+                      </el-tag>
                     </el-form-item>
                     <el-form-item label="FM光功率">
                       <div class="input-with-unit">
@@ -208,6 +222,9 @@
                   <div class="form-fields">
                     <el-form-item label="合同号质检是否通过">
                       <el-switch v-model="contractForm.qcPassed" />
+                      <el-tag :type="contractForm.qcPassed ? 'success' : 'warning'" class="status-tag">
+                        {{ contractForm.qcPassed ? '已通过' : '未通过' }}
+                      </el-tag>
                     </el-form-item>
                     <el-form-item label="合同号">
                       <el-input v-model="contractForm.contractNo" class="custom-input" />
@@ -686,6 +703,10 @@ onMounted(() => {
   padding: 20px;
 }
 
+.overview-content .overview-item:first-child {
+  grid-column: 1 / -1;
+}
+
 .overview-item {
   display: flex;
   align-items: center;
@@ -699,6 +720,12 @@ onMounted(() => {
 
 .overview-item .value {
   color: #303133;
+  display: flex;
+  align-items: center;
+}
+
+.overview-item .status-tag {
+  margin-left: 0;
 }
 
 .form-container {
@@ -830,5 +857,29 @@ onMounted(() => {
   .custom-input {
     width: 100%;
   }
+}
+
+:deep(.el-tag) {
+  border-radius: 4px;
+  padding: 0 8px;
+  height: 24px;
+  line-height: 22px;
+  font-size: 12px;
+  border: none;
+  margin-left: 12px;
+}
+
+:deep(.el-tag--success) {
+  background: rgba(0, 180, 42, 0.1);
+  color: #00b42a;
+}
+
+:deep(.el-tag--warning) {
+  background: rgba(255, 125, 0, 0.1);
+  color: #ff7d00;
+}
+
+.status-tag {
+  margin-left: 12px;
 }
 </style> 
