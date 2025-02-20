@@ -1,171 +1,148 @@
-import base64
-import csv
-import datetime
+import sys
 import json
+import base64
 import logging
-import os
-from random import random
-
-import dashscope
-import requests
-from dashscope import MultiModalConversation, Generation
-
-
-#打印SN信息
-def printSNInfo(SN:str):
-    result = {}
-    result['SN'] = SN
-    # print(result)
-    return result
+import traceback
+from datetime import datetime
+from dashscope import ImageModel
 
 # 配置日志
-def setup_logging():
-    current_time = datetime.datetime.now()
-    formatted_date = current_time.strftime("%Y-%b-%d %H:%M:%S") 
-    current_date = datetime.datetime.now().strftime("%Y%m%d")
-    logging.basicConfig(filename='app.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-    return current_date, formatted_date
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('sn_recognition.log'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger(__name__)
 
-# API配置
-def setup_api():
-    dashscope.api_key = ""
-    api_url = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
-    api_key = ""
-    return api_url, api_key
-
-# 工具定义
-tools = [
-    {
-        "type": "function",
-        "function": {
-            "name": "printSNInfo",
-            "description": "SN码,打印SN信息",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "SN": {
-                        "description": "SN",
-                        "type": "String"
-                    }
-                },
-                "required": ["SN"]
-            }
-        }
-    }
-]
-
-# 提示词定义
-prompt = '''
-please extract SN from the input ONT images.
-
-The SN value is typically a combination of letters and numbers, which may contain hyphens. You should always follow the instructions and output a valid JSON object.
-
-only return the json format schema, which could be inferred by the following OpticalPowerInfo class
-
-public class SNInfo {  
-    String SN;  
-}  
-
-If you do not recognize any value or recognize any value with low confidence, 
-set the corresponding value NA for SN.
-'''
-
-def get_sn_from_image(base64_image):
-    """
-    从ONT图片中提取SN码
-    
-    Args:
-        base64_image: base64编码后的图片数据
-        
-    Returns:
-        str: SN码，如果识别失败返回"NA"
-    """
+def setup_api_key():
     try:
-        # 调用通义千问模型
-        qwen_response = qwenRecoV1(base64_image)
+        # 这里替换为你的API key
+        api_key = 'sk-9a005b5e8ae14d85ac230b3dbad58da9'
+        logger.info("API key 配置成功")
+        return api_key
+    except Exception as e:
+        logger.error(f"API key 配置失败: {str(e)}")
+        raise
+
+def read_image(file_path):
+    try:
+        logger.info(f"开始读取图片文件: {file_path}")
+        with open(file_path, 'r') as f:
+            base64_str = f.read().strip()
         
-        # 构造消息
+        # 验证base64字符串
+        try:
+            image_data = base64.b64decode(base64_str)
+            logger.info(f"图片文件读取成功，大小: {len(image_data)} bytes")
+            return base64_str
+        except Exception as e:
+            logger.error(f"Base64解码失败: {str(e)}")
+            raise
+    except Exception as e:
+        logger.error(f"读取图片文件失败: {str(e)}")
+        raise
+
+def process_image(api_key, base64_str):
+    try:
+        logger.info("开始处理图片...")
+        
+        # 构建请求消息
         messages = [{
-            "role": "user",
-            "content": qwen_response
+            'role': 'user',
+            'content': '请识别图片中的SN码。SN码通常是一串字母和数字的组合，可能包含连字符。'
         }]
         
-        # 调用模型获取结果
-        response = get_response(messages)
+        # 调用API
+        logger.info("调用通义千问API...")
+        response = ImageModel.call(
+            model='qwen-vl-plus',
+            messages=messages,
+            image=base64_str,
+            api_key=api_key
+        )
         
-        if response is not None:
-            assistant_output = response['output']['choices'][0]['message']
+        logger.info(f"API响应: {response}")
+        
+        # 解析响应
+        if response.status_code == 200:
+            logger.info("API调用成功")
+            content = response.output.choices[0].message.content
+            logger.info(f"识别结果: {content}")
             
-            # 如果有工具调用
-            if 'tool_calls' in assistant_output:
-                if assistant_output['tool_calls'][0]['function']['name'] == 'printSNInfo':
-                    args = json.loads(assistant_output['tool_calls'][0]['function']['arguments'])
-                    sn = args.get('SN', 'NA')
-                    return sn
-                    
+            # 尝试提取SN码
+            sn_code = extract_sn_code(content)
+            logger.info(f"提取的SN码: {sn_code}")
+            
+            return sn_code
+        else:
+            logger.error(f"API调用失败: {response.status_code}")
+            raise Exception(f"API调用失败: {response.status_code}")
+            
+    except Exception as e:
+        logger.error(f"处理图片失败: {str(e)}")
+        logger.error(f"详细错误: {traceback.format_exc()}")
+        raise
+
+def extract_sn_code(content):
+    try:
+        logger.info("开始提取SN码...")
+        # 如果返回的是JSON格式
+        try:
+            data = json.loads(content)
+            if 'snCode' in data:
+                return data['snCode']
+        except json.JSONDecodeError:
+            logger.info("响应不是JSON格式，尝试直接提取")
+        
+        # 直接从文本中提取
+        import re
+        # SN码模式：字母数字和连字符的组合，长度通常在8-20之间
+        pattern = r'[A-Z0-9-]{8,20}'
+        matches = re.findall(pattern, content.upper())
+        
+        if matches:
+            logger.info(f"找到可能的SN码: {matches[0]}")
+            return matches[0]
+        
+        logger.warning("未找到符合格式的SN码")
         return "NA"
         
     except Exception as e:
-        logging.error(f'处理图片失败: {str(e)}')
+        logger.error(f"提取SN码失败: {str(e)}")
         return "NA"
 
-def qwenRecoV1(base64_image):
-    messages = [{
-        'role': 'user',
-        'content': [
-            {
-                'image': "data:image/jpeg;base64," + base64_image
-            },
-            {
-                'text': prompt
-            },
-        ]
-    }]
-    response = MultiModalConversation.call(model='qwen-vl-max', messages=messages)
-    content = response['output']['choices'][0]['message']['content'][0]["text"]
-    return content
+def main():
+    try:
+        logger.info("开始执行SN码识别...")
+        
+        # 检查命令行参数
+        if len(sys.argv) != 2:
+            logger.error("使用方法: python script.py <image_file_path>")
+            sys.exit(1)
+            
+        image_file = sys.argv[1]
+        logger.info(f"输入文件: {image_file}")
+        
+        # 设置API key
+        api_key = setup_api_key()
+        
+        # 读取图片
+        base64_str = read_image(image_file)
+        
+        # 处理图片
+        result = process_image(api_key, base64_str)
+        
+        # 输出结果
+        print(result)
+        logger.info(f"处理完成，结果: {result}")
+        
+    except Exception as e:
+        logger.error(f"程序执行失败: {str(e)}")
+        print(f"NA")
+        sys.exit(1)
 
-def get_response(messages):
-    url = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation'
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization':f'Bearer {dashscope.api_key}'
-    }
-    body = {
-        'model': 'qwen-max',
-        "input": {
-            "messages": messages
-        },
-        "parameters": {
-            "result_format": "message",
-            "tools": tools
-        }
-    }
-    response = requests.post(url, headers=headers, json=body)
-    return response.json()
-
-def process_sn_image(image_path):
-    """
-    处理图片并识别SN码
-    
-    Args:
-        image_path: 图片路径
-    Returns:
-        str: 识别到的SN码
-    """
-    # 设置API密钥
-    setup_api()
-    
-    # 读取并编码图片
-    with open(image_path, "rb") as image_file:
-        base64_image = base64.b64encode(image_file.read()).decode('utf-8')
-    
-    # 识别SN码
-    sn = get_sn_from_image(base64_image)
-    print(sn)
-    return sn
-
-if __name__ == '__main__':
-    # 示例用法
-    image_path = "/Users/itadmin/cursor/validate_2.0/backend/data/sn/sn2.jpg"
-    process_sn_image(image_path)
+if __name__ == "__main__":
+    main()
