@@ -1,54 +1,7 @@
 <template>
   <div class="qc-detail">
     <el-container>
-      <!-- 顶部导航栏 -->
-      <el-header class="header">
-        <div class="header-content">
-          <div class="header-left">
-            <div class="logo">
-              <img src="../assets/cmhk.png" alt="CMHK Logo" class="nav-logo-image">
-              <span class="logo-text">装维质检系统</span>
-            </div>
-          </div>
-          <div class="nav-menu">
-            <el-menu
-              mode="horizontal"
-              :router="true"
-              class="main-menu"
-              :default-active="$route.path">
-              <el-menu-item index="/">
-                <el-icon><HomeFilled /></el-icon>
-                <span>首页</span>
-              </el-menu-item>
-              <el-menu-item index="/work-order">
-                <el-icon><Document /></el-icon>
-                <span>工单详情</span>
-              </el-menu-item>
-              <el-menu-item index="/speed-test">
-                <el-icon><Monitor /></el-icon>
-                <span>速度测试识别</span>
-              </el-menu-item>
-              <el-menu-item index="/optical-power">
-                <el-icon><Lightning /></el-icon>
-                <span>光功率识别</span>
-              </el-menu-item>
-              <el-menu-item index="/sn-code">
-                <el-icon><Cpu /></el-icon>
-                <span>SN识别</span>
-              </el-menu-item>
-            </el-menu>
-          </div>
-          <div class="header-right">
-            <template v-if="isLoggedIn">
-              <span class="user-info">
-                admin
-                <el-icon><CaretBottom /></el-icon>
-              </span>
-            </template>
-          </div>
-        </div>
-      </el-header>
-
+      <NavHeader />
       <!-- 主要内容区域 -->
       <el-main>
         <div class="qc-detail-container">
@@ -307,6 +260,7 @@ import {
   RefreshLeft
 } from '@element-plus/icons-vue'
 import request from '../utils/request'
+import NavHeader from '../components/NavHeader.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -586,98 +540,19 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.header {
-  background-color: #fff;
-  border-bottom: 1px solid #dcdfe6;
-  padding: 0;
-  position: fixed;
-  width: 100%;
-  z-index: 1000;
-  height: 60px;
+.qc-detail {
+  min-height: 100vh;
+  background-color: #f5f7fa;
 }
 
-.header-content {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  padding: 0 20px;
-  max-width: 1400px;
+.el-main {
+  padding-top: 80px;
+  max-width: 1200px;
   margin: 0 auto;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  margin-right: 40px;
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.nav-logo-image {
-  height: 32px;
-  width: auto;
-}
-
-.logo-text {
-  font-size: 16px;
-  font-weight: 500;
-  color: #303133;
-  white-space: nowrap;
-}
-
-.nav-menu {
-  flex: 1;
-}
-
-.main-menu {
-  border-bottom: none;
-  background: transparent;
-}
-
-.main-menu :deep(.el-menu-item) {
-  height: 60px;
-  line-height: 60px;
-  padding: 0 16px;
-}
-
-.main-menu :deep(.el-menu-item .el-icon) {
-  margin-right: 4px;
-  font-size: 18px;
-}
-
-.main-menu :deep(.el-menu-item span) {
-  font-size: 14px;
-}
-
-.header-right {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  color: #606266;
-}
-
-.user-info .el-icon {
-  font-size: 12px;
 }
 
 .qc-detail-container {
-  padding-top: 80px;
   padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-  background-color: #f5f7fa;
 }
 
 .box-card {

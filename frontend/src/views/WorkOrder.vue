@@ -1,60 +1,7 @@
 <template>
   <div class="work-order">
     <el-container>
-      <!-- 顶部导航栏 -->
-      <el-header class="header">
-        <div class="header-content">
-          <div class="header-left">
-            <div class="logo">
-              <img src="../assets/cmhk.png" alt="CMHK Logo" class="nav-logo-image">
-              <h2>装维质检系统</h2>
-            </div>
-            <el-menu
-              mode="horizontal"
-              :router="true"
-              class="main-menu"
-              :default-active="$route.path">
-              <el-menu-item index="/">
-                <el-icon><House /></el-icon>
-                <span>首页</span>
-              </el-menu-item>
-              <el-menu-item index="/work-order">
-                <el-icon><Document /></el-icon>
-                <span>工单详情</span>
-              </el-menu-item>
-              <el-menu-item index="/speed-test">
-                <el-icon><Monitor /></el-icon>
-                <span>速度测试识别</span>
-              </el-menu-item>
-              <el-menu-item index="/optical-power">
-                <el-icon><Lightning /></el-icon>
-                <span>光功率识别</span>
-              </el-menu-item>
-              <el-menu-item index="/sn-code">
-                <el-icon><Cpu /></el-icon>
-                <span>SN识别</span>
-              </el-menu-item>
-            </el-menu>
-          </div>
-          <div class="header-right">
-            <template v-if="isLoggedIn">
-              <el-dropdown>
-                <span class="user-dropdown">
-                  {{ userInfo.username }}
-                  <el-icon><CaretBottom /></el-icon>
-                </span>
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item @click="handleLogout">退出登录</el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
-            </template>
-          </div>
-        </div>
-      </el-header>
-
-      <!-- 主要内容区域 -->
+      <NavHeader />
       <el-main>
         <div class="work-order-content">
           <!-- 搜索和筛选区域 -->
@@ -246,6 +193,7 @@ import {
 } from '@element-plus/icons-vue'
 import request from '../utils/request'
 import axios from 'axios'
+import NavHeader from '../components/NavHeader.vue'
 
 const router = useRouter()
 const userInfo = ref({
@@ -467,104 +415,30 @@ onMounted(() => {
 <style scoped>
 .work-order {
   min-height: 100vh;
-  background-color: #f8f9fa;
-}
-
-.header {
-  background: #fff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-  position: fixed;
-  width: 100%;
-  z-index: 100;
-  padding: 0;
-  height: 60px;
-}
-
-.header-content {
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 24px;
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 32px;
-  flex: 1;
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  min-width: 200px;
-}
-
-.logo h2 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 500;
-  color: #1d2129;
-  white-space: nowrap;
-}
-
-.nav-logo-image {
-  height: 28px;
-  width: auto;
-  margin-right: 12px;
-}
-
-.main-menu {
-  border-bottom: none;
-  flex: 1;
-  white-space: nowrap;
-}
-
-:deep(.el-menu--horizontal) {
-  border-bottom: none;
-}
-
-:deep(.el-menu--horizontal > .el-menu-item) {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 60px;
-  line-height: 60px;
-  border-bottom: none;
-  padding: 0 20px;
-  font-size: 14px;
-  color: #4e5969;
-}
-
-:deep(.el-menu-item.is-active) {
-  color: #165dff;
-  background: transparent;
-  border-bottom: 2px solid #165dff;
-  font-weight: 500;
-}
-
-:deep(.el-menu-item:hover) {
-  color: #165dff;
-  background: rgba(22, 93, 255, 0.05);
-}
-
-.user-dropdown {
-  cursor: pointer;
-  color: #1d2129;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
+  background-color: #f5f7fa;
 }
 
 .el-main {
   padding-top: 80px;
-  min-height: calc(100vh - 60px);
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
+/* Remove header related styles */
+.header,
+.header-content,
+.header-left,
+.logo,
+.nav-logo-image,
+.logo-text,
+.nav-menu,
+.main-menu,
+.header-right,
+.user-info {
+  /* These styles are now handled by NavHeader component */
+}
+
+/* Keep other existing styles */
 .work-order-content {
   max-width: 1800px;
   margin: 0 auto;
@@ -742,11 +616,5 @@ onMounted(() => {
 :deep(.el-tag--warning) {
   background: rgba(255, 125, 0, 0.1);
   color: #ff7d00;
-}
-
-.header-right {
-  display: flex;
-  gap: 24px;
-  align-items: center;
 }
 </style> 
