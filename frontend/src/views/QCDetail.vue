@@ -56,28 +56,75 @@
                 <div class="form-main-content">
                   <div class="form-fields">
                     <el-form-item label="速度测试质检是否通过">
-                      <el-switch v-model="speedForm.qcPassed" />
-                      <el-tag :type="speedForm.qcPassed ? 'success' : 'warning'" class="status-tag">
-                        {{ speedForm.qcPassed ? '已通过' : '未通过' }}
-                      </el-tag>
+                      <span class="value">
+                        <el-tag :type="speedForm.qcPassed ? 'success' : 'warning'" class="status-tag">
+                          {{ speedForm.qcPassed ? '已通过' : '未通过' }}
+                        </el-tag>
+                      </span>
                     </el-form-item>
-                    <el-form-item label="上传速度">
+                    <el-form-item label="AI识别上传速度">
+                      <span class="value">
+                        {{ orderData.uploadSpeed || '暂无数据' }}
+                        {{ orderData.uploadSpeed ? 'MB' : '' }}
+                      </span>
+                    </el-form-item>
+                    <el-form-item label="分包商手动编辑上传速度">
+                      <span class="value">
+                        {{ orderData.uploadSpeedManual || '暂无数据' }}
+                        {{ orderData.uploadSpeedManual ? 'MB' : '' }}
+                      </span>
+                    </el-form-item>
+                    <el-form-item label="管理员输入——上传速度">
                       <div class="input-with-unit">
-                        <el-input-number v-model="speedForm.uploadSpeed" :min="0" :precision="2" :step="0.1" />
+                        <el-input-number v-model="speedForm.adminUploadSpeed" :min="0" :precision="2" :step="0.1" />
                         <span class="unit">MB</span>
                       </div>
                     </el-form-item>
-                    <el-form-item label="下载速度">
+                    <el-form-item label="上传速度是否达标">
+                      <span class="value">
+                        <el-tag :type="orderData.uploadSpeedSuccess === 'Y' ? 'success' : 'warning'" class="status-tag">
+                          {{ orderData.uploadSpeedSuccess === 'Y' ? '已达标' : '未达标' }}
+                        </el-tag>
+                      </span>
+                    </el-form-item>
+                    <el-form-item label="AI识别下载速度">
+                      <span class="value">
+                        {{ orderData.downloadSpeed || '暂无数据' }}
+                        {{ orderData.downloadSpeed ? 'MB' : '' }}
+                      </span>
+                    </el-form-item>
+                    <el-form-item label="分包商手动编辑下载速度">
+                      <span class="value">
+                        {{ orderData.downloadSpeedManual || '暂无数据' }}
+                        {{ orderData.downloadSpeedManual ? 'MB' : '' }}
+                      </span>
+                    </el-form-item>
+                    <el-form-item label="下载速度是否达标">
+                      <span class="value">
+                        <el-tag :type="orderData.downloadSpeedSuccess === 'Y' ? 'success' : 'warning'" class="status-tag">
+                          {{ orderData.downloadSpeedSuccess === 'Y' ? '已达标' : '未达标' }}
+                        </el-tag>
+                      </span>
+                    </el-form-item>
+                    <el-form-item label="管理员输入——下载速度">
                       <div class="input-with-unit">
-                        <el-input-number v-model="speedForm.downloadSpeed" :min="0" :precision="2" :step="0.1" />
+                        <el-input-number v-model="speedForm.adminDownloadSpeed" :min="0" :precision="2" :step="0.1" />
                         <span class="unit">MB</span>
                       </div>
                     </el-form-item>
                     <el-form-item label="IP是否重复">
-                      <el-switch v-model="speedForm.ipDuplicate" />
+                      <span class="value">
+                        <el-tag :type="!speedForm.ipDuplicate ? 'success' : 'warning'" class="status-tag">
+                          {{ !speedForm.ipDuplicate ? '未重复' : '已重复' }}
+                        </el-tag>
+                      </span>
                     </el-form-item>
                     <el-form-item label="参考编号是否重复">
-                      <el-switch v-model="speedForm.refNoDuplicate" />
+                      <span class="value">
+                        <el-tag :type="!speedForm.refNoDuplicate ? 'success' : 'warning'" class="status-tag">
+                          {{ !speedForm.refNoDuplicate ? '未重复' : '已重复' }}
+                        </el-tag>
+                      </span>
                     </el-form-item>
                   </div>
                   <div class="image-container">
@@ -111,22 +158,54 @@
                 <div class="form-main-content">
                   <div class="form-fields">
                     <el-form-item label="光功率质检是否通过">
-                      <el-switch v-model="powerForm.qcPassed" />
-                      <el-tag :type="powerForm.qcPassed ? 'success' : 'warning'" class="status-tag">
-                        {{ powerForm.qcPassed ? '已通过' : '未通过' }}
-                      </el-tag>
+                      <span class="value">
+                        <el-tag :type="powerForm.qcPassed ? 'success' : 'warning'" class="status-tag">
+                          {{ powerForm.qcPassed ? '已通过' : '未通过' }}
+                        </el-tag>
+                      </span>
                     </el-form-item>
-                    <el-form-item label="FM光功率">
+                    <el-form-item label="AI识别FM光功率">
+                      <span class="value">
+                        {{ orderData.fmOutputPower || '暂无数据' }}
+                        {{ orderData.fmOutputPower ? 'dBm' : '' }}
+                      </span>
+                    </el-form-item>
+                    <el-form-item label="分包商手动编辑FM光功率">
+                      <span class="value">
+                        {{ orderData.fmOutputPowerManual || '暂无数据' }}
+                        {{ orderData.fmOutputPowerManual ? 'dBm' : '' }}
+                      </span>
+                    </el-form-item>
+                    <el-form-item label="管理员输入——FM光功率">
                       <div class="input-with-unit">
-                        <el-input-number v-model="powerForm.fmPower" :precision="2" :step="0.01" />
+                        <el-input-number v-model="powerForm.adminFmOpticalPower" :precision="2" :step="0.01" />
                         <span class="unit">dBm</span>
                       </div>
                     </el-form-item>
-                    <el-form-item label="插座光功率">
+                    <el-form-item label="AI识别插座光功率">
+                      <span class="value">
+                        {{ orderData.odbPowerMeter || '暂无数据' }}
+                        {{ orderData.odbPowerMeter ? 'dBm' : '' }}
+                      </span>
+                    </el-form-item>
+                    <el-form-item label="分包商手动编辑插座光功率">
+                      <span class="value">
+                        {{ orderData.odbPowerMeterManual || '暂无数据' }}
+                        {{ orderData.odbPowerMeterManual ? 'dBm' : '' }}
+                      </span>
+                    </el-form-item>
+                    <el-form-item label="管理员输入——插座光功率">
                       <div class="input-with-unit">
-                        <el-input-number v-model="powerForm.outletPower" :precision="2" :step="0.01" />
+                        <el-input-number v-model="powerForm.adminSocketOpticalPower" :precision="2" :step="0.01" />
                         <span class="unit">dBm</span>
                       </div>
+                    </el-form-item>
+                    <el-form-item label="光功率衰减值是否达标">
+                      <span class="value">
+                        <el-tag :type="orderData.opticalDiffSuccess === 'Y' ? 'success' : 'warning'" class="status-tag">
+                          {{ orderData.opticalDiffSuccess === 'Y' ? '已达标' : '未达标' }}
+                        </el-tag>
+                      </span>
                     </el-form-item>
                   </div>
                   <div class="image-container">
@@ -174,16 +253,37 @@
                 <div class="form-main-content">
                   <div class="form-fields">
                     <el-form-item label="合同号质检是否通过">
-                      <el-switch v-model="contractForm.qcPassed" />
-                      <el-tag :type="contractForm.qcPassed ? 'success' : 'warning'" class="status-tag">
-                        {{ contractForm.qcPassed ? '已通过' : '未通过' }}
-                      </el-tag>
+                      <span class="value">
+                        <el-tag :type="contractForm.qcPassed ? 'success' : 'warning'" class="status-tag">
+                          {{ contractForm.qcPassed ? '已通过' : '未通过' }}
+                        </el-tag>
+                      </span>
                     </el-form-item>
-                    <el-form-item label="合同号">
-                      <el-input v-model="contractForm.contractNo" class="custom-input" />
+                    <el-form-item label="AI识别合同号">
+                      <span class="value">
+                        {{ orderData.ocrContractId || '暂无数据' }}
+                      </span>
                     </el-form-item>
-                    <el-form-item label="旧SN编码">
-                      <el-input v-model="contractForm.oldSNCode" class="custom-input" />
+                    <el-form-item label="工单数据合同号">
+                      <span class="value">
+                        {{ orderData.contractId || '暂无数据' }}
+                      </span>
+                    </el-form-item>
+                    <el-form-item label="管理员输入——合同号">
+                      <el-input v-model="contractForm.adminContractId" class="custom-input" />
+                    </el-form-item>
+                    <el-form-item label="AI识别SN码">
+                      <span class="value">
+                        {{ orderData.snCode || '暂无数据' }}
+                      </span>
+                    </el-form-item>
+                    <el-form-item label="分包商手动输入SN码">
+                      <span class="value">
+                        {{ orderData.snCodeManual || '暂无数据' }}
+                      </span>
+                    </el-form-item>
+                    <el-form-item label="管理员输入——SN编码">
+                      <el-input v-model="contractForm.adminSn" class="custom-input" />
                     </el-form-item>
                   </div>
                   <div class="image-container">
@@ -223,16 +323,19 @@
           <el-card class="box-card">
             <template #header>
               <div class="card-header">
-                <h3>整体操作</h3>
+                <h3>管理员操作</h3>
               </div>
             </template>
             <div class="form-container">
               <div class="form-actions overall-actions">
-                <el-button type="primary" size="large" @click="handleOverallSubmit" :loading="submitting">
-                  <el-icon><Check /></el-icon>整体提交
+                <el-button type="success" size="large" @click="handleQualityStatusUpdate('Y')" :loading="submitting">
+                  <el-icon><Check /></el-icon>质检人工通过
                 </el-button>
-                <el-button type="warning" size="large" @click="handleOverallReset">
-                  <el-icon><RefreshLeft /></el-icon>全部重置
+                <el-button type="danger" size="large" @click="handleQualityStatusUpdate('N')" :loading="submitting">
+                  <el-icon><Close /></el-icon>质检人工未通过
+                </el-button>
+                <el-button type="primary" size="large" @click="handleOverallSubmit" :loading="submitting">
+                  <el-icon><Check /></el-icon>整体更新
                 </el-button>
               </div>
             </div>
@@ -257,6 +360,7 @@ import {
   CaretBottom,
   Picture,
   Check,
+  Close,
   RefreshLeft
 } from '@element-plus/icons-vue'
 import request from '../utils/request'
@@ -271,23 +375,22 @@ const orderData = ref({})
 // 表单数据
 const speedForm = ref({
   qcPassed: false,
-  uploadSpeed: null,
-  downloadSpeed: null,
+  adminUploadSpeed: null,
+  adminDownloadSpeed: null,
   ipDuplicate: false,
   refNoDuplicate: false
 })
 
 const powerForm = ref({
   qcPassed: false,
-  fmPower: null,
-  outletPower: null
+  adminFmOpticalPower: null,
+  adminSocketOpticalPower: null
 })
 
 const contractForm = ref({
   qcPassed: false,
-  contractNo: '',
-  oldSNCode: '',
-  newSNCode: ''
+  adminContractId: '',
+  adminSn: ''
 })
 
 const userInfo = ref({
@@ -315,9 +418,9 @@ const fetchOrderDetails = async () => {
 
     // 更新速度表单
     const speedData = {
-      qcPassed: response.data.quality_status === 'Y',
-      uploadSpeed: Number(response.data.uploadSpeedManual) || Number(response.data.uploadSpeed) || null,
-      downloadSpeed: Number(response.data.downloadSpeedManual) || Number(response.data.downloadSpeed) || null,
+      qcPassed: response.data.qualityStatus === 'Y',
+      adminUploadSpeed: null,
+      adminDownloadSpeed: null,
       ipDuplicate: response.data.speedTestIP === 'N',
       refNoDuplicate: response.data.speedTestRefNo === 'N'
     }
@@ -325,18 +428,17 @@ const fetchOrderDetails = async () => {
     
     // 更新功率表单
     const powerData = {
-      qcPassed: response.data.optical_power_status === 'Y',
-      fmPower: Number(response.data.fmOutputPowerManual) || Number(response.data.fmOutputPower) || null,
-      outletPower: Number(response.data.odbPowerMeterManual) || Number(response.data.odbPowerMeter) || null
+      qcPassed: response.data.opticalPowerStatus === 'Y',
+      adminFmOpticalPower: null,
+      adminSocketOpticalPower: null
     }
     powerForm.value = powerData
     
     // 更新合同表单
     const contractData = {
-      qcPassed: response.data.contract_status === 'Y',
-      contractNo: response.data.ocrContractId || '',
-      oldSNCode: response.data.ontOldSn || '',
-      newSNCode: response.data.ontNewSn || ''
+      qcPassed: response.data.contractStatus === 'Y',
+      adminContractId: response.data.ocrContractId || '',
+      adminSn: response.data.ontOldSn || ''
     }
     contractForm.value = contractData
 
@@ -360,13 +462,17 @@ const handleSpeedSubmit = async () => {
   try {
     const updatedData = {
       ...orderData.value,
-      quality_status: speedForm.value.qcPassed ? 'Y' : 'N',
-      uploadSpeedManual: speedForm.value.uploadSpeed,
-      downloadSpeedManual: speedForm.value.downloadSpeed
+      qualityStatus: speedForm.value.qcPassed ? 'Y' : 'N',
+      uploadSpeedManual: speedForm.value.adminUploadSpeed,
+      downloadSpeedManual: speedForm.value.adminDownloadSpeed
     }
     await axios.put(`http://localhost:8081/api/orders/${jobNo}`, updatedData)
+    orderData.value = {
+      ...orderData.value,
+      uploadSpeedManual: speedForm.value.adminUploadSpeed,
+      downloadSpeedManual: speedForm.value.adminDownloadSpeed
+    }
     ElMessage.success('速度质检数据提交成功')
-    fetchOrderDetails()
   } catch (error) {
     ElMessage.error('提交失败')
     console.error('Error submitting speed data:', error)
@@ -383,13 +489,17 @@ const handlePowerSubmit = async () => {
   try {
     const updatedData = {
       ...orderData.value,
-      optical_power_status: powerForm.value.qcPassed ? 'Y' : 'N',
-      fmOutputPowerManual: powerForm.value.fmPower,
-      odbPowerMeterManual: powerForm.value.outletPower
+      opticalPowerStatus: powerForm.value.qcPassed ? 'Y' : 'N',
+      fmOutputPowerManual: powerForm.value.adminFmOpticalPower,
+      odbPowerMeterManual: powerForm.value.adminSocketOpticalPower
     }
     await axios.put(`http://localhost:8081/api/orders/${jobNo}`, updatedData)
+    orderData.value = {
+      ...orderData.value,
+      fmOutputPowerManual: powerForm.value.adminFmOpticalPower,
+      odbPowerMeterManual: powerForm.value.adminSocketOpticalPower
+    }
     ElMessage.success('光功率质检数据提交成功')
-    fetchOrderDetails()
   } catch (error) {
     ElMessage.error('提交失败')
     console.error('Error submitting power data:', error)
@@ -406,11 +516,17 @@ const handleContractSubmit = async () => {
   try {
     const updatedData = {
       ...orderData.value,
-      contract_status: contractForm.value.qcPassed ? 'Y' : 'N'
+      contractStatus: contractForm.value.qcPassed ? 'Y' : 'N',
+      ocrContractId: contractForm.value.adminContractId,
+      ontOldSn: contractForm.value.adminSn
     }
     await axios.put(`http://localhost:8081/api/orders/${jobNo}`, updatedData)
+    orderData.value = {
+      ...orderData.value,
+      ocrContractId: contractForm.value.adminContractId,
+      ontOldSn: contractForm.value.adminSn
+    }
     ElMessage.success('合同质检数据提交成功')
-    fetchOrderDetails()
   } catch (error) {
     ElMessage.error('提交失败')
     console.error('Error submitting contract data:', error)
@@ -423,8 +539,8 @@ const handleContractSubmit = async () => {
 const resetSpeedForm = () => {
   speedForm.value = {
     qcPassed: false,
-    uploadSpeed: null,
-    downloadSpeed: null,
+    adminUploadSpeed: null,
+    adminDownloadSpeed: null,
     ipDuplicate: false,
     refNoDuplicate: false
   }
@@ -433,17 +549,16 @@ const resetSpeedForm = () => {
 const resetPowerForm = () => {
   powerForm.value = {
     qcPassed: false,
-    fmPower: null,
-    outletPower: null
+    adminFmOpticalPower: null,
+    adminSocketOpticalPower: null
   }
 }
 
 const resetContractForm = () => {
   contractForm.value = {
     qcPassed: false,
-    contractNo: orderData.value.ocrContractId || '',
-    oldSNCode: orderData.value.ontOldSn || '',
-    newSNCode: orderData.value.ontNewSn || ''
+    adminContractId: '',
+    adminSn: ''
   }
 }
 
@@ -483,15 +598,15 @@ const handleOverallSubmit = async () => {
     const updatedData = {
       ...orderData.value,
       // 速度测试数据
-      quality_status: speedForm.value.qcPassed ? 'Y' : 'N',
-      uploadSpeedManual: speedForm.value.uploadSpeed,
-      downloadSpeedManual: speedForm.value.downloadSpeed,
+      qualityStatus: speedForm.value.qcPassed ? 'Y' : 'N',
+      uploadSpeedManual: speedForm.value.adminUploadSpeed,
+      downloadSpeedManual: speedForm.value.adminDownloadSpeed,
       // 光功率数据
-      optical_power_status: powerForm.value.qcPassed ? 'Y' : 'N',
-      fmOutputPowerManual: powerForm.value.fmPower,
-      odbPowerMeterManual: powerForm.value.outletPower,
+      opticalPowerStatus: powerForm.value.qcPassed ? 'Y' : 'N',
+      fmOutputPowerManual: powerForm.value.adminFmOpticalPower,
+      odbPowerMeterManual: powerForm.value.adminSocketOpticalPower,
       // 合同数据
-      contract_status: contractForm.value.qcPassed ? 'Y' : 'N'
+      contractStatus: contractForm.value.qcPassed ? 'Y' : 'N'
     }
 
     await axios.put(`http://localhost:8081/api/orders/${jobNo}`, updatedData)
@@ -531,6 +646,40 @@ const handleOverallReset = async () => {
       ElMessage.error('重置失败')
       console.error('Error resetting forms:', error)
     }
+  }
+}
+
+// 处理质检状态更新
+const handleQualityStatusUpdate = async (status) => {
+  if (submitting.value) return
+  
+  // 检查状态是否有变化
+  if (orderData.value.qualityStatus === status) {
+    ElMessage.warning('质检状态无变化，无需更新')
+    return
+  }
+  
+  try {
+    submitting.value = true
+    const updatedData = {
+      ...orderData.value,
+      qualityStatus: status
+    }
+
+    await axios.put(`http://localhost:8081/api/orders/${jobNo}`, updatedData)
+    
+    // 更新本地数据
+    orderData.value = {
+      ...orderData.value,
+      qualityStatus: status
+    }
+    
+    ElMessage.success(`质检状态已更新为${status === 'Y' ? '人工通过' : '人工未通过'}`)
+  } catch (error) {
+    ElMessage.error('质检状态更新失败')
+    console.error('Error updating quality status:', error)
+  } finally {
+    submitting.value = false
   }
 }
 
@@ -594,7 +743,8 @@ onMounted(() => {
 }
 
 .overview-item .value {
-  color: #303133;
+  color: #606266;
+  font-size: 14px;
   display: flex;
   align-items: center;
 }
@@ -633,7 +783,15 @@ onMounted(() => {
 }
 
 .unit {
+  margin-left: 8px;
   color: #909399;
+}
+
+.value {
+  color: #606266;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
 }
 
 .image-container {
@@ -708,11 +866,13 @@ onMounted(() => {
 
 .overall-actions {
   padding: 20px 0;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
 }
 
 .overall-actions .el-button {
   min-width: 120px;
-  margin: 0 20px;
 }
 
 .overall-actions .el-icon {
@@ -741,20 +901,9 @@ onMounted(() => {
   line-height: 22px;
   font-size: 12px;
   border: none;
-  margin-left: 12px;
-}
-
-:deep(.el-tag--success) {
-  background: rgba(0, 180, 42, 0.1);
-  color: #00b42a;
-}
-
-:deep(.el-tag--warning) {
-  background: rgba(255, 125, 0, 0.1);
-  color: #ff7d00;
 }
 
 .status-tag {
-  margin-left: 12px;
+  margin: 0;
 }
 </style> 

@@ -2,6 +2,7 @@ package com.fix.cmhk.validation.service;
 
 import com.fix.cmhk.validation.model.entity.OrderInfo;
 import com.fix.cmhk.validation.model.dto.DuplicateCheckResponse;
+import com.fix.cmhk.validation.model.entity.OrderInfoUpdateDetail;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -59,4 +60,7 @@ public interface OrderInfoService {
     DuplicateCheckResponse checkSpeedTestRefNoDuplicate(Integer refNo);
     DuplicateCheckResponse checkSnCodeDuplicate(String snCode);
     DuplicateCheckResponse checkOcrContractIdDuplicate(String ocrContractId);
+    
+    // Add new method to get update history
+    List<OrderInfoUpdateDetail> getUpdateHistory(String jobNo);
 } 

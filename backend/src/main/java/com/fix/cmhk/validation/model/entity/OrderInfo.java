@@ -177,4 +177,37 @@ public class OrderInfo {
     
     @Column(name = "ocr_contract_id")
     private String ocrContractId;
+
+    @Column(name = "admin_upload_speed")
+    private String adminUploadSpeed;
+    
+    @Column(name = "admin_download_speed")
+    private String adminDownloadSpeed;
+    
+    @Column(name = "admin_socket_optical_power")
+    private String adminSocketOpticalPower;
+    
+    @Column(name = "admin_fm_optical_power")
+    private String adminFmOpticalPower;
+    
+    @Column(name = "admin_contract_id")
+    private String adminContractId;
+    
+    @Column(name = "admin_sn")
+    private String adminSn;
+
+    @Column(name = "sn_code_manual")
+    private String snCodeManual;
+
+    @Column(name = "upload_speed_success")
+    private Integer uploadSpeedSuccess;
+    
+    @Column(name = "download_speed_success")
+    private Integer downloadSpeedSuccess;
+    
+    @Column(name = "contract_and_sn_success")
+    private Integer contractAndSNSuccess;
+
+    @Column(name = "optical_diff_success")
+    private Integer opticalDiffSuccess;
 } 

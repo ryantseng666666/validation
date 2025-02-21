@@ -64,26 +64,22 @@ import {
   Upload
 } from '@element-plus/icons-vue'
 import NavHeader from '../components/NavHeader.vue'
+import { useAuth } from '../composables/useAuth'
+import { useFileUpload } from '../composables/useFileUpload'
 
 const router = useRouter()
 const result = ref(null)
-const previewImage = ref(null)
-
-const userInfo = ref({
-  username: '',
-  role: '',
-  email: ''
-})
-
-const isLoggedIn = computed(() => {
-  return localStorage.getItem('token') !== null
+const { userInfo, isLoggedIn, loadUserInfo } = useAuth()
+const { uploading, previewImage, triggerUpload } = useFileUpload({
+  maxSize: 5,
+  acceptTypes: ['image/jpeg', 'image/png'],
+  onSuccess: (base64Image) => {
+    // Handle successful upload
+  }
 })
 
 onMounted(() => {
-  const userStr = localStorage.getItem('user')
-  if (userStr) {
-    userInfo.value = JSON.parse(userStr)
-  }
+  loadUserInfo()
 })
 
 const handleLogout = () => {
@@ -91,44 +87,6 @@ const handleLogout = () => {
   localStorage.removeItem('user')
   ElMessage.success('已退出登录')
   router.push('/login')
-}
-
-const uploading = ref(false)
-const fileInput = ref(null)
-
-const triggerUpload = () => {
-  const input = document.createElement('input')
-  input.type = 'file'
-  input.accept = 'image/*'
-  input.onchange = (e) => {
-    const file = e.target.files[0]
-    if (file) {
-      handleFileUpload(file)
-    }
-  }
-  input.click()
-}
-
-const handleFileUpload = (file) => {
-  if (!file) return
-  
-  const isImage = file.type.startsWith('image/')
-  const isLt5M = file.size / 1024 / 1024 < 5
-
-  if (!isImage) {
-    ElMessage.error('只能上传图片文件!')
-    return
-  }
-  if (!isLt5M) {
-    ElMessage.error('图片大小不能超过 5MB!')
-    return
-  }
-
-  const reader = new FileReader()
-  reader.readAsDataURL(file)
-  reader.onload = (e) => {
-    previewImage.value = e.target.result
-  }
 }
 
 const handlePredict = async () => {

@@ -31,4 +31,19 @@ public class OrderInfoRequest {
     private String speedTestIP;
     private String snCode;
     private String ocrContractId;
+    
+    private String adminUploadSpeed;
+    private String adminDownloadSpeed;
+    private String adminSocketOpticalPower;
+    private String adminFmOpticalPower;
+    private String adminContractId;
+    private String adminSn;
+    
+    private String snCodeManual;
+    
+    private Integer uploadSpeedSuccess;
+    private Integer downloadSpeedSuccess;
+    private Integer contractAndSNSuccess;
+    
+    private Integer opticalDiffSuccess;
 } 

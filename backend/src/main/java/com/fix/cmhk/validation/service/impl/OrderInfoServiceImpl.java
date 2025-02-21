@@ -15,14 +15,38 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Arrays;
+import java.util.Objects;
+import java.lang.reflect.Field;
 
 import com.fix.cmhk.validation.model.dto.DuplicateCheckResponse;
+import com.fix.cmhk.validation.model.entity.OrderInfoUpdateDetail;
+import com.fix.cmhk.validation.repository.OrderInfoUpdateDetailRepository;
+import com.fix.cmhk.validation.util.SecurityUtils;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
+@Transactional
 public class OrderInfoServiceImpl implements OrderInfoService {
 
     @Autowired
     private OrderInfoRepository orderInfoRepository;
+
+    @Autowired
+    private OrderInfoUpdateDetailRepository updateDetailRepository;
+
+    @Autowired
+    private SecurityUtils securityUtils;
+
+    private static final List<String> TRACKED_FIELDS = Arrays.asList(
+        "adminUploadSpeed",
+        "adminDownloadSpeed",
+        "adminSocketOpticalPower",
+        "adminFmOpticalPower",
+        "adminContractId",
+        "adminSn"
+    );
 
     @Override
     @Transactional
@@ -35,13 +59,41 @@ public class OrderInfoServiceImpl implements OrderInfoService {
 
     @Override
     @Transactional
-    public OrderInfo updateOrder(String jobNo, OrderInfo orderInfo) {
+    public OrderInfo updateOrder(String jobNo, OrderInfo newOrderInfo) {
         OrderInfo existingOrder = orderInfoRepository.findByJobNo(jobNo)
                 .orElseThrow(() -> new EntityNotFoundException("工单不存在: " + jobNo));
         
-        // 保留ID，更新其他字段
-        orderInfo.setJobNo(jobNo);
-        BeanUtils.copyProperties(orderInfo, existingOrder, "jobNo");
+        // Track changes before update
+        for (String fieldName : TRACKED_FIELDS) {
+            try {
+                Field field = OrderInfo.class.getDeclaredField(fieldName);
+                field.setAccessible(true);
+                String oldValue = (String) field.get(existingOrder);
+                String newValue = (String) field.get(newOrderInfo);
+                
+                if (!Objects.equals(oldValue, newValue)) {
+                    // Create update detail record
+                    OrderInfoUpdateDetail detail = OrderInfoUpdateDetail.builder()
+                        .jobNo(jobNo)
+                        .fieldName(fieldName)
+                        .oldValue(oldValue)
+                        .newValue(newValue)
+                        .updateTime(LocalDateTime.now())
+                        .updateBy(securityUtils.getCurrentUsername())
+                        .build();
+                    log.debug("test detail");
+                    updateDetailRepository.save(detail);
+                    log.info("Field {} updated for job {}: {} -> {}", 
+                        fieldName, jobNo, oldValue, newValue);
+                }
+            } catch (Exception e) {
+                log.error("Error tracking field changes for {}: {}", fieldName, e.getMessage(), e);
+            }
+        }
+        
+        // Update the order
+        newOrderInfo.setJobNo(jobNo);
+        BeanUtils.copyProperties(newOrderInfo, existingOrder, "jobNo");
         
         return orderInfoRepository.save(existingOrder);
     }
@@ -193,5 +245,10 @@ public class OrderInfoServiceImpl implements OrderInfoService {
             isDuplicate ? "OCR合同ID重复使用超过2次" : "OCR合同ID使用正常",
             (int) count
         );
+    }
+
+    @Override
+    public List<OrderInfoUpdateDetail> getUpdateHistory(String jobNo) {
+        return updateDetailRepository.findByJobNoOrderByUpdateTimeDesc(jobNo);
     }
 } 

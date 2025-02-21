@@ -1,8 +1,11 @@
 package com.fix.cmhk.validation.controller;
 
 import com.fix.cmhk.validation.model.entity.OrderInfo;
+import com.fix.cmhk.validation.model.entity.OrderInfoUpdateDetail;
 import com.fix.cmhk.validation.model.dto.DuplicateCheckResponse;
+import com.fix.cmhk.validation.model.dto.OrderUpdateDetailResponse;
 import com.fix.cmhk.validation.service.OrderInfoService;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -10,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -166,6 +170,19 @@ public class OrderInfoController {
     @GetMapping("/check/ocr-contract/{id}")
     public ResponseEntity<DuplicateCheckResponse> checkOcrContractIdDuplicate(@PathVariable String id) {
         DuplicateCheckResponse response = orderInfoService.checkOcrContractIdDuplicate(id);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{jobNo}/update-history")
+    public ResponseEntity<List<OrderUpdateDetailResponse>> getUpdateHistory(@PathVariable String jobNo) {
+        List<OrderInfoUpdateDetail> history = orderInfoService.getUpdateHistory(jobNo);
+        List<OrderUpdateDetailResponse> response = history.stream()
+            .map(detail -> {
+                OrderUpdateDetailResponse dto = new OrderUpdateDetailResponse();
+                BeanUtils.copyProperties(detail, dto);
+                return dto;
+            })
+            .collect(Collectors.toList());
         return ResponseEntity.ok(response);
     }
 } 
