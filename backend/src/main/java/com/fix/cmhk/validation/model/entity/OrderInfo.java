@@ -92,74 +92,74 @@ public class OrderInfo {
     @Column(columnDefinition = "TEXT")
     private String speedTestResult;
     
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "download_speed")
     private String downloadSpeed;
     
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "download_speed_manual")
     private String downloadSpeedManual;
     
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "upload_speed")
     private String uploadSpeed;
     
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "upload_speed_manual")
     private String uploadSpeedManual;
     
-    @Column(columnDefinition = "TEXT")
-    private String fmOutputPowerSnapshot;
-    
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "fm_output_power")
     private String fmOutputPower;
     
-    @Column(columnDefinition = "TEXT")
-    private String fmOutputPowerManual;
-    
-    @Column(columnDefinition = "TEXT")
-    private String odbPowerMeterSnapshot;
-    
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "odb_power_meter")
     private String odbPowerMeter;
     
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "fm_output_power_snapshot")
+    private String fmOutputPowerSnapshot;
+    
+    @Column(name = "fm_output_power_manual")
+    private String fmOutputPowerManual;
+    
+    @Column(name = "odb_power_meter_snapshot")
+    private String odbPowerMeterSnapshot;
+    
+    @Column(name = "odb_power_meter_manual")
     private String odbPowerMeterManual;
     
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "ont_led_status")
     private String ontLedStatus;
     
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "ont_led_light_manual")
     private String ontLedLightManual;
     
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "line_label_manual")
     private String lineLabelManual;
     
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "ont_label_manual")
     private String ontLabelManual;
     
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "signed_uat")
     private String signedUat;
     
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "before_activity_photo")
     private String beforeActivityPhoto;
     
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "floor_difference")
     private String floorDifference;
     
     private String currentHandler;
-    private String itemStatus;
+    @Column(name = "quality_status")
     private String qualityStatus;
     
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "quality_remark")
     private String qualityRemark;
     
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "optical_power_auto_result")
     private String opticalPowerAutoResult;
     
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "optical_power_manual_result")
     private String opticalPowerManualResult;
     
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "speed_auto_result")
     private String speedAutoResult;
     
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "speed_manual_result")
     private String speedManualResult;
     
     private String isCharge;
@@ -167,7 +167,8 @@ public class OrderInfo {
     private String sVlan;
     private String cVlan;
     
-    private Integer speedTestRefNo;
+    @Column(name = "speed_test_ref_no")
+    private String speedTestRefNo;
     
     @Column(name = "speed_test_IP")
     private String speedTestIP;
@@ -210,4 +211,34 @@ public class OrderInfo {
 
     @Column(name = "optical_diff_success")
     private Integer opticalDiffSuccess;
+
+    @Column(name = "optical_power")
+    private String opticalPower;
+    
+    @Column(name = "auto_success")
+    private Integer autoSuccess;
+
+    @Column(name = "is_ai_processed")
+    private Integer isAIProcessed;
+
+    @Column(name = "sn_code_snapshot")
+    private String snCodeSnapshot;
+    
+    @Column(name = "contract_id_snapshot")
+    private String contractIdSnapshot;
+    
+    @Column(name = "speed_test_ip_duplicate")
+    private Integer speedTestIpDuplicate;
+    
+    @Column(name = "speed_test_ref_duplicate")
+    private Integer speedTestRefIsDuplicate;
+    
+    @Column(name = "sn_duplicate")
+    private Integer snIsDuplicate;
+    
+    @Column(name = "contract_id_duplicate")
+    private Integer contractIdIsDuplicate;
+    
+    @Column(name = "item_status")
+    private String itemStatus;
 } 

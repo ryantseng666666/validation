@@ -9,12 +9,15 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/orders")
 public class OrderInfoController {
@@ -122,12 +125,12 @@ public class OrderInfoController {
     // Example curl command:
     // curl -X GET "http://localhost:8080/api/orders/last-year/page?page=0&size=10" -H "accept: application/json"
 
-    @GetMapping("/speed-test/ref/{refNo}")
-    public ResponseEntity<OrderInfo> getBySpeedTestRefNo(@PathVariable Integer refNo) {
-        return orderInfoService.findBySpeedTestRefNo(refNo)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
+//    @GetMapping("/speed-test/ref/{refNo}")
+//    public ResponseEntity<OrderInfo> getBySpeedTestRefNo(@PathVariable Integer refNo) {
+//        return orderInfoService.findBySpeedTestRefNo(refNo)
+//                .map(ResponseEntity::ok)
+//                .orElse(ResponseEntity.notFound().build());
+//    }
     
     @GetMapping("/speed-test/ip/{ip}")
     public ResponseEntity<List<OrderInfo>> getBySpeedTestIP(@PathVariable String ip) {
@@ -156,7 +159,7 @@ public class OrderInfoController {
     }
     
     @GetMapping("/check/speed-test-ref/{refNo}")
-    public ResponseEntity<DuplicateCheckResponse> checkSpeedTestRefNoDuplicate(@PathVariable Integer refNo) {
+    public ResponseEntity<DuplicateCheckResponse> checkSpeedTestRefNoDuplicate(@PathVariable String refNo) {
         DuplicateCheckResponse response = orderInfoService.checkSpeedTestRefNoDuplicate(refNo);
         return ResponseEntity.ok(response);
     }
@@ -184,5 +187,17 @@ public class OrderInfoController {
             })
             .collect(Collectors.toList());
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/process-monthly-ai")
+    public ResponseEntity<String> processMonthlyAIData(@RequestParam String monthDate) {
+        try {
+            String result = orderInfoService.processMonthlyAIData(monthDate);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("处理当月AI质检数据失败: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("处理失败: " + e.getMessage());
+        }
     }
 } 

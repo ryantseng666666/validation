@@ -1,5 +1,9 @@
 package com.fix.cmhk.validation.service.impl;
 
+import com.fix.cmhk.validation.model.OpticalPowerResponse;
+import com.fix.cmhk.validation.model.PredictionRequest;
+import com.fix.cmhk.validation.model.SNCodeResponse;
+import com.fix.cmhk.validation.model.SpeedTestResponse;
 import com.fix.cmhk.validation.model.entity.OrderInfo;
 import com.fix.cmhk.validation.repository.OrderInfoRepository;
 import com.fix.cmhk.validation.service.OrderInfoService;
@@ -7,8 +11,10 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.retry.support.RetryTemplate;
 
 import javax.persistence.EntityNotFoundException;
 import java.time.LocalDate;
@@ -18,12 +24,20 @@ import java.util.Optional;
 import java.util.Arrays;
 import java.util.Objects;
 import java.lang.reflect.Field;
+import java.util.Base64;
 
 import com.fix.cmhk.validation.model.dto.DuplicateCheckResponse;
 import com.fix.cmhk.validation.model.entity.OrderInfoUpdateDetail;
 import com.fix.cmhk.validation.repository.OrderInfoUpdateDetailRepository;
 import com.fix.cmhk.validation.util.SecurityUtils;
 import lombok.extern.slf4j.Slf4j;
+import com.fix.cmhk.validation.controller.OpticalPowerController;
+import com.fix.cmhk.validation.controller.SNCodeController;
+import com.fix.cmhk.validation.controller.SpeedTestController;
+import com.fix.cmhk.validation.model.request.ImageRequest;
+import com.fix.cmhk.validation.model.PredictionRequest;
+import com.fix.cmhk.validation.model.OpticalPowerResponse;
+import com.fix.cmhk.validation.model.SpeedTestResponse;
 
 @Slf4j
 @Service
@@ -38,6 +52,18 @@ public class OrderInfoServiceImpl implements OrderInfoService {
 
     @Autowired
     private SecurityUtils securityUtils;
+
+    @Autowired
+    private OpticalPowerController opticalPowerController;
+
+    @Autowired
+    private SNCodeController snCodeController;
+
+    @Autowired
+    private SpeedTestController speedTestController;
+
+    @Autowired
+    private RetryTemplate retryTemplate;
 
     private static final List<String> TRACKED_FIELDS = Arrays.asList(
         "adminUploadSpeed",
@@ -184,7 +210,7 @@ public class OrderInfoServiceImpl implements OrderInfoService {
     }
 
     @Override
-    public Optional<OrderInfo> findBySpeedTestRefNo(Integer speedTestRefNo) {
+    public Optional<OrderInfo> findBySpeedTestRefNo(String speedTestRefNo) {
         return orderInfoRepository.findBySpeedTestRefNo(speedTestRefNo);
     }
     
@@ -215,7 +241,7 @@ public class OrderInfoServiceImpl implements OrderInfoService {
     }
     
     @Override
-    public DuplicateCheckResponse checkSpeedTestRefNoDuplicate(Integer refNo) {
+    public DuplicateCheckResponse checkSpeedTestRefNoDuplicate(String refNo) {
         long count = orderInfoRepository.countBySpeedTestRefNo(refNo);
         boolean isDuplicate = count > 2;
         return new DuplicateCheckResponse(
@@ -250,5 +276,168 @@ public class OrderInfoServiceImpl implements OrderInfoService {
     @Override
     public List<OrderInfoUpdateDetail> getUpdateHistory(String jobNo) {
         return updateDetailRepository.findByJobNoOrderByUpdateTimeDesc(jobNo);
+    }
+
+    @Override
+    @Transactional
+    public String processMonthlyAIData(String monthDate) {
+        try {
+            return retryTemplate.execute(context -> {
+                // 1. 获取需要处理的工单
+                List<OrderInfo> orders = getUnprocessedOrders(monthDate);
+                
+                for (OrderInfo order : orders) {
+                    try {
+                        // 2. 数据预处理
+                        preprocessOrder(order);
+                        
+                        // 3. 带宽验证
+                        validateBandwidth(order);
+                        
+                        // 4. 光功率验证
+                        validateOpticalPower(order);
+                        
+                        // 5. 最终质检判定
+                        determineQualityStatus(order);
+                        
+                        // 6. 更新工单
+                        orderInfoRepository.save(order);
+                        
+                    } catch (Exception e) {
+                        log.error("处理工单失败 [jobNo={}]: {}", order.getJobNo(), e.getMessage(), e);
+                        setErrorValues(order);
+                        orderInfoRepository.save(order);
+                    }
+                }
+                
+                return "success";
+            });
+        } catch (Exception e) {
+            log.error("处理当月AI质检数据失败: {}", e.getMessage(), e);
+            return "fail";
+        }
+    }
+    
+    private List<OrderInfo> getUnprocessedOrders(String monthDate) {
+        LocalDateTime startOfMonth = LocalDate.parse(monthDate + "-01").atStartOfDay();
+        LocalDateTime endOfMonth = startOfMonth.plusMonths(1).minusSeconds(1);
+        return orderInfoRepository.findByCreateDateBetweenAndIsAIProcessed(
+            startOfMonth, endOfMonth, 0);
+    }
+    
+    private void preprocessOrder(OrderInfo order) {
+        // 处理 FM 输出功率
+        if (order.getFmOutputPowerSnapshot() != null) {
+            ImageRequest request = new ImageRequest();
+            request.setBase64Image(Base64.getEncoder().encodeToString(order.getFmOutputPowerSnapshot().getBytes()));
+            ResponseEntity<OpticalPowerResponse> response = opticalPowerController.predict(request);
+            order.setFmOutputPower(response.getBody().getOpticalPower().toString());
+        }
+        
+        // 处理 ODB 功率计
+        if (order.getOdbPowerMeterSnapshot() != null) {
+            ImageRequest request = new ImageRequest();
+            request.setBase64Image(Base64.getEncoder().encodeToString(order.getOdbPowerMeterSnapshot().getBytes()));
+            ResponseEntity<OpticalPowerResponse> response = opticalPowerController.predict(request);
+            order.setOdbPowerMeter(response.getBody().getOpticalPower().toString());
+        }
+        
+        // 处理 SN 码
+        if (order.getSnCodeSnapshot() != null) {
+            ImageRequest request = new ImageRequest();
+            request.setBase64Image(Base64.getEncoder().encodeToString(order.getSnCodeSnapshot().getBytes()));
+            ResponseEntity<SNCodeResponse> response = snCodeController.predict(request);
+            order.setSnCode(response.getBody().getSnCode());
+        }
+        
+        // 处理合同 ID
+        if (order.getContractIdSnapshot() != null) {
+            ImageRequest request = new ImageRequest();
+            request.setBase64Image(Base64.getEncoder().encodeToString(order.getContractIdSnapshot().getBytes()));
+            ResponseEntity<SNCodeResponse> response = snCodeController.predict(request);
+            order.setOcrContractId(response.getBody().getSnCode());
+        }
+        
+        // 处理速度测试
+        if (order.getSpeedTestResult() != null) {
+            PredictionRequest request = new PredictionRequest();
+            request.setBase64Image(Base64.getEncoder().encodeToString(order.getSpeedTestResult().getBytes()));
+            ResponseEntity<SpeedTestResponse> response = speedTestController.predict(request);
+            order.setUploadSpeed(response.getBody().getUploadSpeed().toString());
+            order.setDownloadSpeed(response.getBody().getDownloadSpeed().toString());
+            order.setSpeedTestRefNo(response.getBody().getReferenceId()) ;
+            order.setSpeedTestIP(response.getBody().getIpAddress());
+        }
+        
+        // 设置重复检查标志
+        order.setSpeedTestIpDuplicate(checkSpeedTestIPDuplicate(order.getSpeedTestIP()).getCount() <= 1 ? 0 : 1);
+        order.setSpeedTestRefIsDuplicate(checkSpeedTestRefNoDuplicate(order.getSpeedTestRefNo()).getCount() <= 1 ? 0 : 1);
+        order.setSnIsDuplicate(checkSnCodeDuplicate(order.getSnCode()).getCount() <= 1 ? 0 : 1);
+        order.setContractIdIsDuplicate(checkOcrContractIdDuplicate(order.getOcrContractId()).getCount() <= 1 ? 0 : 1);
+        order.setIsAIProcessed(1);
+    }
+    
+    private void validateBandwidth(OrderInfo order) {
+        // 验证上传速度
+        String uploadSpeed = Optional.ofNullable(order.getUploadSpeed())
+            .orElse(order.getUploadSpeedManual());
+        if (uploadSpeed != null) {
+            double speed = Double.parseDouble(uploadSpeed);
+            double bandwidth = Double.parseDouble(order.getBandwidth());
+            order.setUploadSpeedSuccess(speed > 0.8 * bandwidth ? 1 : 0);
+        } else {
+            order.setUploadSpeedSuccess(-1);
+        }
+        
+        // 验证下载速度
+        String downloadSpeed = Optional.ofNullable(order.getDownloadSpeed())
+            .orElse(order.getDownloadSpeedManual());
+        if (downloadSpeed != null) {
+            double speed = Double.parseDouble(downloadSpeed);
+            double bandwidth = Double.parseDouble(order.getBandwidth());
+            order.setDownloadSpeedSuccess(speed > 0.8 * bandwidth ? 1 : 0);
+        } else {
+            order.setDownloadSpeedSuccess(-1);
+        }
+    }
+    
+    private void validateOpticalPower(OrderInfo order) {
+        String fmPower = Optional.ofNullable(order.getFmOutputPower())
+            .orElse(order.getFmOutputPowerManual());
+        String odbPower = Optional.ofNullable(order.getOdbPowerMeter())
+            .orElse(order.getOdbPowerMeterManual());
+        
+        if (fmPower != null && odbPower != null) {
+            double fmValue = Double.parseDouble(fmPower);
+            double odbValue = Double.parseDouble(odbPower);
+            order.setOpticalDiffSuccess(
+                (fmValue - odbValue <= 1.6 && odbValue <= -26) ? 1 : 0
+            );
+        } else {
+            order.setOpticalDiffSuccess(-1);
+        }
+    }
+    
+    private void determineQualityStatus(OrderInfo order) {
+        boolean isAutoSuccess = 
+            order.getSpeedTestIpDuplicate() == 0 &&
+            order.getSpeedTestRefIsDuplicate() == 0 &&
+            order.getSnIsDuplicate() == 0 &&
+            order.getContractIdIsDuplicate() == 0 &&
+            order.getUploadSpeedSuccess() == 1 &&
+            order.getDownloadSpeedSuccess() == 1 &&
+            order.getOpticalDiffSuccess() == 1 &&
+            (order.getItemStatus() == null || "Y".equals(order.getItemStatus()));
+        
+        order.setQualityStatus(isAutoSuccess ? "autoSuccess" : "autoFail");
+        order.setAutoSuccess(isAutoSuccess ? 1 : 0);
+    }
+    
+    private void setErrorValues(OrderInfo order) {
+        order.setUploadSpeedSuccess(-1);
+        order.setDownloadSpeedSuccess(-1);
+        order.setOpticalDiffSuccess(-1);
+        order.setAutoSuccess(-1);
+        order.setQualityStatus("autoFail");
     }
 } 

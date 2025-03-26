@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -34,7 +35,7 @@ public interface OrderInfoRepository extends JpaRepository<OrderInfo, String>, J
     @Query("SELECT o FROM OrderInfo o WHERE DATE(o.createDate) BETWEEN DATE(:startDate) AND DATE(:endDate)")
     Page<OrderInfo> findByCreateDateBetween(LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
     
-    Optional<OrderInfo> findBySpeedTestRefNo(Integer speedTestRefNo);
+    Optional<OrderInfo> findBySpeedTestRefNo(String speedTestRefNo);
     Optional<OrderInfo> findBySnCode(String snCode);
     Optional<OrderInfo> findByOcrContractId(String ocrContractId);
     List<OrderInfo> findBySpeedTestIP(String speedTestIP);
@@ -43,11 +44,19 @@ public interface OrderInfoRepository extends JpaRepository<OrderInfo, String>, J
     long countBySpeedTestIP(String ip);
     
     @Query("SELECT COUNT(o) FROM OrderInfo o WHERE o.speedTestRefNo = :refNo")
-    long countBySpeedTestRefNo(Integer refNo);
+    long countBySpeedTestRefNo(String refNo);
     
     @Query("SELECT COUNT(o) FROM OrderInfo o WHERE o.snCode = :snCode")
     long countBySnCode(String snCode);
     
     @Query("SELECT COUNT(o) FROM OrderInfo o WHERE o.ocrContractId = :ocrContractId")
     long countByOcrContractId(String ocrContractId);
+
+    // 根据创建时间范围和AI处理状态查询工单
+    @Query("SELECT o FROM OrderInfo o WHERE o.createDate BETWEEN :startDate AND :endDate AND o.isAIProcessed = :processed")
+    List<OrderInfo> findByCreateDateBetweenAndIsAIProcessed(
+        @Param("startDate") LocalDateTime startDate,
+        @Param("endDate") LocalDateTime endDate,
+        @Param("processed") Integer processed
+    );
 } 

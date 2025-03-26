@@ -51,16 +51,23 @@ public interface OrderInfoService {
     Page<OrderInfo> findLastMonthOrders(Pageable pageable);
     Page<OrderInfo> findLastYearOrders(Pageable pageable);
     
-    Optional<OrderInfo> findBySpeedTestRefNo(Integer speedTestRefNo);
+    Optional<OrderInfo> findBySpeedTestRefNo(String speedTestRefNo);
     Optional<OrderInfo> findBySnCode(String snCode);
     Optional<OrderInfo> findByOcrContractId(String ocrContractId);
     List<OrderInfo> findBySpeedTestIP(String speedTestIP);
     
     DuplicateCheckResponse checkSpeedTestIPDuplicate(String ip);
-    DuplicateCheckResponse checkSpeedTestRefNoDuplicate(Integer refNo);
+    DuplicateCheckResponse checkSpeedTestRefNoDuplicate(String refNo);
     DuplicateCheckResponse checkSnCodeDuplicate(String snCode);
     DuplicateCheckResponse checkOcrContractIdDuplicate(String ocrContractId);
     
     // Add new method to get update history
     List<OrderInfoUpdateDetail> getUpdateHistory(String jobNo);
+
+    /**
+     * 处理当月AI质检数据
+     * @param monthDate 月份日期 (格式: yyyy-MM)
+     * @return 处理结果
+     */
+    String processMonthlyAIData(String monthDate);
 } 
