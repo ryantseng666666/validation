@@ -11,18 +11,22 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.retry.support.RetryTemplate;
 
 import javax.persistence.EntityNotFoundException;
+import javax.persistence.criteria.Predicate;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.ArrayList;
 import java.lang.reflect.Field;
 import java.util.Base64;
 
@@ -439,5 +443,43 @@ public class OrderInfoServiceImpl implements OrderInfoService {
         order.setOpticalDiffSuccess(-1);
         order.setAutoSuccess(-1);
         order.setQualityStatus("autoFail");
+    }
+
+    @Override
+    public Page<OrderInfo> searchOrders(
+        String jobNo,
+        String customerOrderId,
+        LocalDateTime startDate,
+        LocalDateTime endDate,
+        Integer autoSuccess,
+        PageRequest pageRequest
+    ) {
+        Specification<OrderInfo> specification = (root, query, criteriaBuilder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            
+            if (jobNo != null && !jobNo.trim().isEmpty()) {
+                predicates.add(criteriaBuilder.like(root.get("jobNo"), "%" + jobNo + "%"));
+            }
+            
+            if (customerOrderId != null && !customerOrderId.trim().isEmpty()) {
+                predicates.add(criteriaBuilder.like(root.get("customerOrderId"), "%" + customerOrderId + "%"));
+            }
+            
+            if (startDate != null) {
+                predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("createDate"), startDate));
+            }
+            
+            if (endDate != null) {
+                predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("createDate"), endDate));
+            }
+            
+            if (autoSuccess != null) {
+                predicates.add(criteriaBuilder.equal(root.get("autoSuccess"), autoSuccess));
+            }
+            
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+        };
+        
+        return orderInfoRepository.findAll(specification, pageRequest);
     }
 } 

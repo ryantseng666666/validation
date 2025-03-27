@@ -4,11 +4,14 @@ import com.fix.cmhk.validation.model.entity.OrderInfo;
 import com.fix.cmhk.validation.model.entity.OrderInfoUpdateDetail;
 import com.fix.cmhk.validation.model.dto.DuplicateCheckResponse;
 import com.fix.cmhk.validation.model.dto.OrderUpdateDetailResponse;
+import com.fix.cmhk.validation.model.dto.OrderSearchRequest;
 import com.fix.cmhk.validation.service.OrderInfoService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -199,5 +202,25 @@ public class OrderInfoController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body("处理失败: " + e.getMessage());
         }
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<Page<OrderInfo>> searchOrders(OrderSearchRequest request) {
+        PageRequest pageRequest = PageRequest.of(
+            request.getPage(),
+            request.getSize(),
+            Sort.by(Sort.Direction.DESC, "createDate")
+        );
+        
+        Page<OrderInfo> orders = orderInfoService.searchOrders(
+            request.getJobNo(),
+            request.getCustomerOrderId(),
+            request.getStartDate(),
+            request.getEndDate(),
+            request.getAutoSuccess(),
+            pageRequest
+        );
+        
+        return ResponseEntity.ok(orders);
     }
 } 

@@ -23,6 +23,24 @@ public class SecurityConstants {
         ORDER_URL
     };
 
+    public static final String[] WHITE_LIST_URLS = {
+        "/api/auth/**",
+        "/api/register",
+        "/api/login",
+        "/api/orders/process-monthly-ai",
+        "/api/orders/search",
+        "/api/orders/**",
+        "/swagger-ui/**",
+        "/v3/api-docs/**",
+        "/swagger-resources/**",
+        "/webjars/**"
+    };
+
+    public static final String TOKEN_PREFIX = "Bearer ";
+    public static final String HEADER_STRING = "Authorization";
+    public static final String SIGN_UP_URL = "/api/register";
+    public static final long EXPIRATION_TIME = 864_000_000; // 10 days
+
     private SecurityConstants() {
         throw new IllegalStateException("Utility class");
     }

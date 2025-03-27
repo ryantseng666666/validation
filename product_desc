@@ -1,0 +1,160 @@
+
+​需求文档​
+​一、后端接口开发
+目标文件​
+backend/src/main/java/com/fix/cmhk/validation/controller/OrderInfoController.java
+
+​1. 接口定义
+接口名称	请求方式	路径	入参	返回值	功能说明
+当月AI质检数据处理接口	POST	/api/order-info/process-monthly-ai	monthDate (格式: yyyy-MM)	success/fail	执行逻辑1-5的数据处理
+当月AI质检数据查重接口	POST	/api/order-info/check-monthly-duplicates	monthDate (格式: yyyy-MM)	success/fail	执行逻辑2的查重操作
+​2. 核心逻辑分解
+逻辑1 - 数据预处理​
+
+text
+1. 查询条件: 
+   - create_date 属于当月 
+   - isAIProcessed = 0
+2. 处理流程:
+   a. 调用 现存的com.fix.cmhk.validation.controller.OpticalPowerController的/api/optical-power/predict接口 (入参: fmOutputPowerSnapshot的base64值) → 填充 fmOutputPower
+   b. 调用 现存的com.fix.cmhk.validation.controller.OpticalPowerController的/api/optical-power/predict接口 (入参: odbPowerMeterSnapshot的base64值) → 填充 odbPowerMeter    
+   c. 调用 现存的com.fix.cmhk.validation.controller.SNCodeController的/api/sn-code/predict接口 (入参: snSnapshot的base64值) → 填充 snCode
+   d. 调用新建的在com.fix.cmhk.validation.controller.SNCodeController的 /api/contract/predict (入参: contractIDSnapshot的base64值) → 填充 ocrContractId
+   e. 调用 现存的com.fix.cmhk.validation.controller.SpeedTestController的/api/speedtest/predict接口 (入参: speedTestResult的base64值) → 填充 uploadSpeed, downloadSpeed, speedTestRefNo, speedTestIP
+3. 更新标记: isAIProcessed = 1
+逻辑2 - 查重处理​
+
+text
+1. 调用查重方法:
+   - 调用 现存的com.fix.cmhk.validation.controller.OrderInfoController#checkSpeedTestIPDuplicate → 设置 speedTestIpDuplicate (1:重复, 0:不重复, -1:异常) 
+   - 调用 现存的com.fix.cmhk.validation.controller.OrderInfoController#checkSpeedTestRefNoDuplicate → 设置 speedTestRefIsDuplicate
+   - 调用 现存的com.fix.cmhk.validation.controller.OrderInfoController#checkSnCodeDuplicate → 设置 snIsDuplicate
+   - 调用 现存的com.fix.cmhk.validation.controller.OrderInfoController#checkOcrContractIdDuplicate → 设置 contractIdIsDuplicate
+2. 组合逻辑:
+   - 若 snIsDuplicate 或 contractIdIsDuplicate 为1 → contractAndSNSuccess = 0，否则为1
+逻辑3 - 带宽验证​
+
+
+1. 上行速度验证:
+   - 取值优先级: uploadSpeed → uploadSpeedManual (若为null或-1)
+   - 条件: 值 > 0.8 * bandwidth → uploadSpeedSuccess = 1，否则为0，异常为-1
+2. 下行速度验证同理 → downloadSpeedSuccess
+逻辑4 - 光功率验证​
+
+1. 取值逻辑:
+   - fmOutputPower → 若无效则取 fmOutputPowerManual
+   - opticalPower → 若无效则取 odbPowerMeterManual
+2. 验证条件:
+   (fmOutputPower - opticalPower) <= 1.6 
+   && opticalPower <= -26 
+   → opticalDiffSuccess = 1，否则为0，异常为-1
+逻辑5 - 最终质检判定​
+
+
+autoSuccess条件:
+speedTestIpDuplicate == 0 
+&& speedTestRefIsDuplicate == 0
+&& snIsDuplicate == 0
+&& contractIdIsDuplicate == 0
+&& uploadSpeedSuccess == 1
+&& downloadSpeedSuccess == 1
+&& opticalDiffSuccess == 1
+&& (item_status == 'Y' || item_status == null)
+→ quality_status = "autoSuccess"，否则为 "autoFail"
+​3. 容错要求
+
+1. 重试机制: 接口调用失败时自动重试3次
+2. 异常处理:
+   - 记录详细错误日志（包含工单ID和失败步骤）
+   - 数值字段默认值: null → -1
+   - 事务管理: 使用 @Transactional 保证数据一致性
+​二、前端开发
+目标文件​
+frontend/src/views/WorkOrder.vue
+
+​1. 新增按钮
+vue
+<template>
+  <div class="search-card">
+    <el-button 
+      type="primary" 
+      @click="handleAIProcess"
+      :loading="aiProcessing">
+      AI质检数据处理
+    </el-button>
+  </div>
+</template>
+
+<script>
+export default {
+  data() {
+    return {
+      aiProcessing: false,
+      currentMonth: '' // 格式: yyyy-MM
+    };
+  },
+  methods: {
+    async handleAIProcess() {
+      this.aiProcessing = true;
+      try {
+        const res = await this.$axios.post('/api/order-info/process-monthly-ai', {
+          params: { monthDate: this.currentMonth }
+        });
+        this.$message.success(res.data === 'success' ? '处理成功' : '处理失败');
+      } catch (error) {
+        this.$message.error('请求失败: ' + error.message);
+      } finally {
+        this.aiProcessing = false;
+      }
+    }
+  }
+};
+</script>
+
+​2. 新增代码结构
+java
+// OrderInfoController.java
+@RestController
+@RequestMapping("/api/order-info")
+@RequiredArgsConstructor
+public class OrderInfoController {
+    private final OrderInfoService orderInfoService;
+
+    @PostMapping("/process-monthly-ai")
+    public String processMonthlyAI(@RequestParam String monthDate) {
+        return orderInfoService.processMonthlyData(monthDate);
+    }
+
+    @PostMapping("/check-monthly-duplicates")
+    public String checkMonthlyDuplicates(@RequestParam String monthDate) {
+        return orderInfoService.checkDuplicates(monthDate);
+    }
+}
+
+// OrderInfoService.java
+public interface OrderInfoService {
+    String processMonthlyData(String monthDate);
+    String checkDuplicates(String monthDate);
+}
+
+// OrderInfoServiceImpl.java
+@Service
+@Slf4j
+@RequiredArgsConstructor
+public class OrderInfoServiceImpl implements OrderInfoService {
+    private final OrderInfoRepository orderInfoRepository;
+    private final RetryTemplate retryTemplate; // Spring Retry 配置
+
+    @Override
+    @Transactional
+    public String processMonthlyData(String monthDate) {
+        List<OrderInfo> orders = orderInfoRepository.findByCreateDateAndIsAIProcessed(monthDate, 0);
+        orders.forEach(order -> {
+            retryTemplate.execute(context -> {
+                // 实现逻辑1-5
+                return null;
+            });
+        });
+        return "success";
+    }
+}

@@ -7,30 +7,37 @@
           <!-- 搜索和筛选区域 -->
           <el-card class="search-card">
             <el-form :inline="true" :model="searchForm" class="search-form">
-              <el-form-item label="工单号">
-                <el-input v-model="searchForm.orderNo" placeholder="请输入工单号" clearable />
-              </el-form-item>
-              <el-form-item label="状态">
-                <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
-                  <el-option label="待处理" value="pending" />
-                  <el-option label="处理中" value="processing" />
-                  <el-option label="已完成" value="completed" />
-                </el-select>
-              </el-form-item>
-              <el-form-item label="日期范围">
-                <el-date-picker
-                  v-model="searchForm.dateRange"
-                  type="daterange"
-                  range-separator="至"
-                  start-placeholder="开始日期"
-                  end-placeholder="结束日期"
-                  value-format="YYYY-MM-DD"
-                />
-              </el-form-item>
-              <el-form-item>
-                <el-button type="primary" @click="handleSearch">搜索</el-button>
-                <el-button @click="resetSearch">重置</el-button>
-              </el-form-item>
+              <div class="search-form-items">
+                <el-form-item label="工单号" class="form-item-fixed">
+                  <el-input v-model="searchForm.jobNo" placeholder="请输入工单号" clearable />
+                </el-form-item>
+                <el-form-item label="客户号" class="form-item-fixed">
+                  <el-input v-model="searchForm.customerOrderId" placeholder="请输入客户号" clearable />
+                </el-form-item>
+                <el-form-item label="AI处理状态" class="form-item-fixed">
+                  <el-select v-model="searchForm.autoSuccess" placeholder="请选择状态" clearable>
+                    <el-option label="成功" :value="1" />
+                    <el-option label="失败" :value="0" />
+                    <el-option label="异常" :value="-1" />
+                  </el-select>
+                </el-form-item>
+                <el-form-item label="日期范围" class="form-item-fixed">
+                  <el-date-picker
+                    v-model="searchForm.dateRange"
+                    type="daterange"
+                    range-separator="至"
+                    start-placeholder="开始日期"
+                    end-placeholder="结束日期"
+                    value-format="YYYY-MM-DD HH:mm:ss"
+                  />
+                </el-form-item>
+              </div>
+              <div class="search-buttons">
+                <el-form-item class="form-item-fixed">
+                  <el-button type="primary" @click="handleSearch">搜索</el-button>
+                  <el-button @click="resetSearch">重置</el-button>
+                </el-form-item>
+              </div>
             </el-form>
             
             <!-- AI处理按钮区域 -->
@@ -81,26 +88,28 @@
                 'vertical-align': 'middle'
               }"
             >
-              <el-table-column prop="contractId" label="工单号" min-width="200" />
+              <el-table-column prop="jobNo" label="工单号" min-width="150" />
+              <el-table-column prop="contractId" label="合同号" min-width="150" />
               <el-table-column prop="customerOrderId" label="客户号" min-width="180" />
-              <el-table-column prop="jobNo" label="Job Number" min-width="200" />
+              <el-table-column prop="orderType" label="工单类型" min-width="120" />
               <el-table-column prop="uploadSpeed" label="上传速度" min-width="150">
                 <template #default="scope">
-                  {{ scope.row.uploadSpeed || scope.row.uploadSpeedManual || '-' }} Mbps
+                  {{ scope.row.uploadSpeed || scope.row.uploadSpeedManual || '-' }}
+                  {{ scope.row.uploadSpeed || scope.row.uploadSpeedManual ? 'Mbps' : '' }}
                 </template>
               </el-table-column>
               <el-table-column prop="downloadSpeed" label="下载速度" min-width="150">
                 <template #default="scope">
-                  {{ scope.row.downloadSpeed || scope.row.downloadSpeedManual || '-' }} Mbps
+                  {{ scope.row.downloadSpeed || scope.row.downloadSpeedManual || '-' }}
+                  {{ scope.row.downloadSpeed || scope.row.downloadSpeedManual ? 'Mbps' : '' }}
                 </template>
               </el-table-column>
-              <el-table-column prop="speedTestRefNo" label="参考编号" min-width="200" />
-              <el-table-column prop="speedTestIP" label="IP地址" min-width="160" />
               <el-table-column prop="fmOutputPower" label="楼层光功率" min-width="150">
                 <template #default="scope">
-                  {{ (scope.row.fmOutputPower != null ? scope.row.fmOutputPower + ' dBm' : null) || 
-                     (scope.row.fmOutputPowerManual != null ? scope.row.fmOutputPowerManual + ' dBm' : null) || 
+                  {{ (scope.row.fmOutputPower != null ? scope.row.fmOutputPower : null) || 
+                     (scope.row.fmOutputPowerManual != null ? scope.row.fmOutputPowerManual : null) || 
                      '-' }}
+                  {{ scope.row.fmOutputPower || scope.row.fmOutputPowerManual ? 'dBm' : '' }}
                 </template>
               </el-table-column>
               <el-table-column prop="createDate" label="工单时间" min-width="180">
@@ -108,10 +117,17 @@
                   {{ formatDate(scope.row.createDate) }}
                 </template>
               </el-table-column>
+              <el-table-column prop="autoSuccess" label="AI处理状态" min-width="120">
+                <template #default="scope">
+                  <el-tag :type="getAutoSuccessTagType(scope.row.autoSuccess)">
+                    {{ getAutoSuccessText(scope.row.autoSuccess) }}
+                  </el-tag>
+                </template>
+              </el-table-column>
               <el-table-column prop="qualityStatus" label="质检状态" min-width="120">
                 <template #default="scope">
-                  <el-tag :type="scope.row.qualityStatus === 'Y' ? 'success' : 'warning'">
-                    {{ scope.row.qualityStatus === 'Y' ? '已通过' : '未通过' }}
+                  <el-tag :type="scope.row.qualityStatus === 'autoSuccess' ? 'success' : 'warning'">
+                    {{ scope.row.qualityStatus === 'autoSuccess' ? '已通过' : '未通过' }}
                   </el-tag>
                 </template>
               </el-table-column>
@@ -240,11 +256,12 @@ const handleLogout = () => {
   router.push('/login')
 }
 
-// 搜索表单
+// 搜索表单数据
 const searchForm = ref({
-  orderNo: '',
-  status: '',
-  dateRange: []
+  jobNo: '',
+  customerOrderId: '',
+  dateRange: [],
+  autoSuccess: ''
 })
 
 // 分页相关
@@ -289,32 +306,36 @@ const rules = {
 const fetchWorkOrders = async () => {
   loading.value = true
   try {
-    let response;
-    if (searchForm.value.orderNo || searchForm.value.status || searchForm.value.dateRange?.length) {
-      // If search criteria exist, use the paginated search endpoint
-      response = await request.get('http://localhost:8081/api/orders/last-month/page', {
-        params: {
-          page: currentPage.value - 1,
-          size: pageSize.value,
-          search: searchForm.value.orderNo || searchForm.value.status || searchForm.value.dateRange?.join(',')
-        }
-      })
-      workOrders.value = response.data.content
-      total.value = response.data.totalElements
+    const params = {
+      jobNo: searchForm.value.jobNo || '',
+      customerOrderId: searchForm.value.customerOrderId || '',
+      startDate: searchForm.value.dateRange?.[0] || '',
+      endDate: searchForm.value.dateRange?.[1] || '',
+      autoSuccess: searchForm.value.autoSuccess || '',
+      page: currentPage.value - 1,
+      size: pageSize.value
+    }
+    
+    console.log('Fetching orders with params:', params) // 添加调试日志
+    const response = await request.get('http://localhost:8081/api/orders/search', { params })
+    
+
+    // 检查响应数据结构
+    if (response) {
+      workOrders.value = response.content || []
+      total.value = response.totalElements || 0
+      console.log('Fetched orders:', workOrders.value) // 添加调试日志
+      console.log('Total elements:', total.value) // 添加调试日志
     } else {
-      // If no search criteria, fetch last year's orders
-      response = await axios.get('http://localhost:8081/api/orders/last-year')
-      if (Array.isArray(response.data)) {
-        workOrders.value = response.data
-        total.value = response.data.length
-      } else {
-        ElMessage.error('获取工单列表数据格式错误')
-        console.error('Invalid response format:', response.data)
-      }
+      workOrders.value = []
+      total.value = 0
+      ElMessage.warning('未获取到数据')
     }
   } catch (error) {
-    ElMessage.error('获取工单列表失败')
-    console.error('Error fetching work orders:', error)
+    console.error('获取数据失败：', error)
+    workOrders.value = []
+    total.value = 0
+    ElMessage.error(error.response?.data?.message || '获取数据失败')
   } finally {
     loading.value = false
   }
@@ -329,9 +350,10 @@ const handleSearch = () => {
 // 重置搜索
 const resetSearch = () => {
   searchForm.value = {
-    orderNo: '',
-    status: '',
-    dateRange: []
+    jobNo: '',
+    customerOrderId: '',
+    dateRange: [],
+    autoSuccess: ''
   }
   currentPage.value = 1
   fetchWorkOrders()
@@ -455,6 +477,32 @@ const handleAIProcess = async () => {
   }
 }
 
+const getAutoSuccessTagType = (status) => {
+  switch (status) {
+    case 1:
+      return 'success'
+    case 0:
+      return 'warning'
+    case -1:
+      return 'danger'
+    default:
+      return 'info'
+  }
+}
+
+const getAutoSuccessText = (status) => {
+  switch (status) {
+    case 1:
+      return '成功'
+    case 0:
+      return '失败'
+    case -1:
+      return '异常'
+    default:
+      return '未处理'
+  }
+}
+
 onMounted(() => {
   fetchWorkOrders()
 })
@@ -468,7 +516,7 @@ onMounted(() => {
 
 .el-main {
   padding-top: 80px;
-  max-width: 1200px;
+  max-width: 1800px;
   margin: 0 auto;
 }
 
@@ -488,7 +536,7 @@ onMounted(() => {
 
 /* Keep other existing styles */
 .work-order-content {
-  max-width: 1800px;
+  max-width: 100%;
   margin: 0 auto;
   padding: 20px;
 }
@@ -506,33 +554,63 @@ onMounted(() => {
 }
 
 .search-form {
+  width: 100%;
+}
+
+.search-form-items {
   display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
-  align-items: flex-start;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
-:deep(.el-form-item) {
+.search-buttons {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  padding-top: 16px;
+  border-top: 1px solid #ebeef5;
+}
+
+.form-item-fixed {
+  flex-shrink: 0;
   margin-bottom: 0;
+  margin-right: 0;
 }
 
-:deep(.el-form-item__label) {
-  color: #4e5969;
-  font-weight: normal;
-  font-size: 14px;
+:deep(.form-item-fixed .el-input) {
+  width: 200px;
 }
 
-:deep(.el-input__inner) {
-  border-radius: 6px;
-  border-color: #e5e6eb;
+:deep(.form-item-fixed .el-select) {
+  width: 200px;
 }
 
-:deep(.el-input__inner:hover) {
-  border-color: #c9cdd4;
+:deep(.form-item-fixed .el-date-editor) {
+  width: 320px;
 }
 
-:deep(.el-input__inner:focus) {
-  border-color: #165dff;
+:deep(.search-buttons .el-form-item__content) {
+  margin-left: 0 !important;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+:deep(.el-input__wrapper),
+:deep(.el-select__wrapper) {
+  box-shadow: none !important;
+}
+
+:deep(.el-input__wrapper:hover),
+:deep(.el-select__wrapper:hover) {
+  box-shadow: 0 0 0 1px #c9cdd4 inset !important;
+}
+
+:deep(.el-input__wrapper.is-focus),
+:deep(.el-select__wrapper.is-focus) {
+  box-shadow: 0 0 0 1px #165dff inset !important;
 }
 
 .work-order-card {

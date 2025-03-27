@@ -5,9 +5,11 @@ import com.fix.cmhk.validation.model.dto.DuplicateCheckResponse;
 import com.fix.cmhk.validation.model.entity.OrderInfoUpdateDetail;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDateTime;
 
 public interface OrderInfoService {
     // 创建工单
@@ -70,4 +72,23 @@ public interface OrderInfoService {
      * @return 处理结果
      */
     String processMonthlyAIData(String monthDate);
+
+    /**
+     * 条件查询工单
+     * @param jobNo 工单号
+     * @param customerOrderId 客户号
+     * @param startDate 开始时间
+     * @param endDate 结束时间
+     * @param autoSuccess AI处理状态
+     * @param pageRequest 分页参数
+     * @return 分页工单列表
+     */
+    Page<OrderInfo> searchOrders(
+        String jobNo,
+        String customerOrderId,
+        LocalDateTime startDate,
+        LocalDateTime endDate,
+        Integer autoSuccess,
+        PageRequest pageRequest
+    );
 } 
