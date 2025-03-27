@@ -32,6 +32,26 @@
                 <el-button @click="resetSearch">重置</el-button>
               </el-form-item>
             </el-form>
+            
+            <!-- AI处理按钮区域 -->
+            <div class="ai-process-container">
+              <el-form-item label="处理月份" class="month-picker">
+                <el-date-picker
+                  v-model="currentMonth"
+                  type="month"
+                  format="YYYY-MM"
+                  value-format="YYYY-MM"
+                  placeholder="选择月份"
+                />
+              </el-form-item>
+              <el-button 
+                type="primary" 
+                @click="handleAIProcess"
+                :loading="aiProcessing"
+                class="ai-process-button">
+                AI质检数据处理
+              </el-button>
+            </div>
           </el-card>
 
           <!-- 工单列表 -->
@@ -407,6 +427,34 @@ const formatDate = (date) => {
   })
 }
 
+// AI处理
+const aiProcessing = ref(false)
+const currentMonth = ref(new Date().toISOString().slice(0, 7)) // 默认当前月份
+
+const handleAIProcess = async () => {
+  if (!currentMonth.value) {
+    ElMessage.warning('请选择要处理的月份')
+    return
+  }
+  
+  aiProcessing.value = true
+  try {
+    const response = await axios.post('http://localhost:8081/api/orders/process-monthly-ai', null, {
+      params: { monthDate: currentMonth.value }
+    })
+    if (response.data === 'success') {
+      ElMessage.success('处理成功')
+      fetchWorkOrders() // 刷新数据
+    } else {
+      ElMessage.warning('处理失败：' + response.data)
+    }
+  } catch (error) {
+    ElMessage.error('处理失败：' + error.message)
+  } finally {
+    aiProcessing.value = false
+  }
+}
+
 onMounted(() => {
   fetchWorkOrders()
 })
@@ -616,5 +664,32 @@ onMounted(() => {
 :deep(.el-tag--warning) {
   background: rgba(255, 125, 0, 0.1);
   color: #ff7d00;
+}
+
+.ai-process-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #ebeef5;
+}
+
+.month-picker {
+  margin-right: 20px;
+  margin-bottom: 0;
+}
+
+.ai-process-button {
+  min-width: 140px;
+}
+
+:deep(.el-form-item.month-picker .el-form-item__label) {
+  font-size: 14px;
+  color: #606266;
+}
+
+:deep(.el-date-editor.el-input) {
+  width: 200px;
 }
 </style> 
