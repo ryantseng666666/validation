@@ -283,166 +283,133 @@ public class OrderInfoServiceImpl implements OrderInfoService {
     }
 
     @Override
-    @Transactional
     public String processMonthlyAIData(String monthDate) {
+        log.info("开始处理月度AI质检数据，处理月份: {}", monthDate);
         try {
-            return retryTemplate.execute(context -> {
-                // 1. 获取需要处理的工单
-                List<OrderInfo> orders = getUnprocessedOrders(monthDate);
-                
-                for (OrderInfo order : orders) {
-                    try {
-                        // 2. 数据预处理
-                        preprocessOrder(order);
-                        
-                        // 3. 带宽验证
-                        validateBandwidth(order);
-                        
-                        // 4. 光功率验证
-                        validateOpticalPower(order);
-                        
-                        // 5. 最终质检判定
-                        determineQualityStatus(order);
-                        
-                        // 6. 更新工单
-                        orderInfoRepository.save(order);
-                        
-                    } catch (Exception e) {
-                        log.error("处理工单失败 [jobNo={}]: {}", order.getJobNo(), e.getMessage(), e);
-                        setErrorValues(order);
-                        orderInfoRepository.save(order);
+            // 解析日期范围
+            LocalDateTime startDate = LocalDate.parse(monthDate + "-01").atStartOfDay();
+            LocalDateTime endDate = startDate.plusMonths(1).minusSeconds(1);
+            log.info("解析月份范围 - 开始日期: {}, 结束日期: {}", startDate, endDate);
+
+            // 查询指定月份内未处理的工单
+            List<OrderInfo> orders = orderInfoRepository.findByCreateDateBetweenAndIsAIProcessed(
+                startDate, endDate, 0);
+            log.info("查询到待处理工单数量: {}", orders.size());
+
+            if (orders.isEmpty()) {
+                log.warn("未找到需要处理的工单数据");
+                return "no data to process";
+            }
+
+            int successCount = 0;
+            int failCount = 0;
+            int totalCount = orders.size();
+
+            for (OrderInfo order : orders) {
+                try {
+                    log.info("开始处理工单: {}, 当前进度: {}/{}", order.getJobNo(), 
+                        successCount + failCount + 1, totalCount);
+
+                    // 验证带宽
+                    boolean speedValid = validateSpeed(order);
+                    log.debug("工单 {} 带宽验证结果: {}", order.getJobNo(), speedValid);
+
+                    // 验证光功率
+                    boolean powerValid = validateOpticalPower(order);
+                    log.debug("工单 {} 光功率验证结果: {}", order.getJobNo(), powerValid);
+
+                    // 更新工单状态
+                    if (speedValid && powerValid) {
+                        order.setAutoSuccess(1);
+                        order.setQualityStatus("autoSuccess");
+                        successCount++;
+                        log.info("工单 {} 验证通过", order.getJobNo());
+                    } else {
+                        order.setAutoSuccess(0);
+                        order.setQualityStatus("autoFail");
+                        failCount++;
+                        log.info("工单 {} 验证不通过 - 带宽验证: {}, 光功率验证: {}", 
+                            order.getJobNo(), speedValid, powerValid);
                     }
+
+                    order.setIsAIProcessed(1);
+                    orderInfoRepository.save(order);
+                    log.debug("工单 {} 状态已更新并保存", order.getJobNo());
+
+                } catch (Exception e) {
+                    log.error("处理工单 {} 时发生错误: {}", order.getJobNo(), e.getMessage(), e);
+                    order.setAutoSuccess(-1);
+                    order.setQualityStatus("error");
+                    order.setIsAIProcessed(1);
+                    orderInfoRepository.save(order);
+                    failCount++;
                 }
-                
-                return "success";
-            });
+            }
+
+            String result = String.format("处理完成 - 总数: %d, 成功: %d, 失败: %d", 
+                totalCount, successCount, failCount);
+            log.info(result);
+            return "success";
+
         } catch (Exception e) {
-            log.error("处理当月AI质检数据失败: {}", e.getMessage(), e);
-            return "fail";
+            log.error("处理月度AI质检数据时发生错误: {}", e.getMessage(), e);
+            return "error: " + e.getMessage();
         }
     }
     
-    private List<OrderInfo> getUnprocessedOrders(String monthDate) {
-        LocalDateTime startOfMonth = LocalDate.parse(monthDate + "-01").atStartOfDay();
-        LocalDateTime endOfMonth = startOfMonth.plusMonths(1).minusSeconds(1);
-        return orderInfoRepository.findByCreateDateBetweenAndIsAIProcessed(
-            startOfMonth, endOfMonth, 0);
-    }
-    
-    private void preprocessOrder(OrderInfo order) {
-        // 处理 FM 输出功率
-        if (order.getFmOutputPowerSnapshot() != null) {
-            ImageRequest request = new ImageRequest();
-            request.setBase64Image(Base64.getEncoder().encodeToString(order.getFmOutputPowerSnapshot().getBytes()));
-            ResponseEntity<OpticalPowerResponse> response = opticalPowerController.predict(request);
-            order.setFmOutputPower(response.getBody().getOpticalPower().toString());
-        }
-        
-        // 处理 ODB 功率计
-        if (order.getOdbPowerMeterSnapshot() != null) {
-            ImageRequest request = new ImageRequest();
-            request.setBase64Image(Base64.getEncoder().encodeToString(order.getOdbPowerMeterSnapshot().getBytes()));
-            ResponseEntity<OpticalPowerResponse> response = opticalPowerController.predict(request);
-            order.setOdbPowerMeter(response.getBody().getOpticalPower().toString());
-        }
-        
-        // 处理 SN 码
-        if (order.getSnCodeSnapshot() != null) {
-            ImageRequest request = new ImageRequest();
-            request.setBase64Image(Base64.getEncoder().encodeToString(order.getSnCodeSnapshot().getBytes()));
-            ResponseEntity<SNCodeResponse> response = snCodeController.predict(request);
-            order.setSnCode(response.getBody().getSnCode());
-        }
-        
-        // 处理合同 ID
-        if (order.getContractIdSnapshot() != null) {
-            ImageRequest request = new ImageRequest();
-            request.setBase64Image(Base64.getEncoder().encodeToString(order.getContractIdSnapshot().getBytes()));
-            ResponseEntity<SNCodeResponse> response = snCodeController.predict(request);
-            order.setOcrContractId(response.getBody().getSnCode());
-        }
-        
-        // 处理速度测试
-        if (order.getSpeedTestResult() != null) {
-            PredictionRequest request = new PredictionRequest();
-            request.setBase64Image(Base64.getEncoder().encodeToString(order.getSpeedTestResult().getBytes()));
-            ResponseEntity<SpeedTestResponse> response = speedTestController.predict(request);
-            order.setUploadSpeed(response.getBody().getUploadSpeed().toString());
-            order.setDownloadSpeed(response.getBody().getDownloadSpeed().toString());
-            order.setSpeedTestRefNo(response.getBody().getReferenceId()) ;
-            order.setSpeedTestIP(response.getBody().getIpAddress());
-        }
-        
-        // 设置重复检查标志
-        order.setSpeedTestIpDuplicate(checkSpeedTestIPDuplicate(order.getSpeedTestIP()).getCount() <= 1 ? 0 : 1);
-        order.setSpeedTestRefIsDuplicate(checkSpeedTestRefNoDuplicate(order.getSpeedTestRefNo()).getCount() <= 1 ? 0 : 1);
-        order.setSnIsDuplicate(checkSnCodeDuplicate(order.getSnCode()).getCount() <= 1 ? 0 : 1);
-        order.setContractIdIsDuplicate(checkOcrContractIdDuplicate(order.getOcrContractId()).getCount() <= 1 ? 0 : 1);
-        order.setIsAIProcessed(1);
-    }
-    
-    private void validateBandwidth(OrderInfo order) {
-        // 验证上传速度
-        String uploadSpeed = Optional.ofNullable(order.getUploadSpeed())
-            .orElse(order.getUploadSpeedManual());
-        if (uploadSpeed != null) {
-            double speed = Double.parseDouble(uploadSpeed);
-            double bandwidth = Double.parseDouble(order.getBandwidth());
-            order.setUploadSpeedSuccess(speed > 0.8 * bandwidth ? 1 : 0);
-        } else {
-            order.setUploadSpeedSuccess(-1);
-        }
-        
-        // 验证下载速度
-        String downloadSpeed = Optional.ofNullable(order.getDownloadSpeed())
-            .orElse(order.getDownloadSpeedManual());
-        if (downloadSpeed != null) {
-            double speed = Double.parseDouble(downloadSpeed);
-            double bandwidth = Double.parseDouble(order.getBandwidth());
-            order.setDownloadSpeedSuccess(speed > 0.8 * bandwidth ? 1 : 0);
-        } else {
-            order.setDownloadSpeedSuccess(-1);
+    private boolean validateSpeed(OrderInfo order) {
+        log.debug("验证工单 {} 的带宽数据", order.getJobNo());
+        try {
+            String uploadSpeedStr = Optional.ofNullable(order.getUploadSpeed())
+                .orElse(order.getUploadSpeedManual());
+            String downloadSpeedStr = Optional.ofNullable(order.getDownloadSpeed())
+                .orElse(order.getDownloadSpeedManual());
+            
+            if (uploadSpeedStr == null || downloadSpeedStr == null) {
+                log.warn("工单 {} 缺少带宽数据 - 上传: {}, 下载: {}", 
+                    order.getJobNo(), uploadSpeedStr, downloadSpeedStr);
+                return false;
+            }
+
+            double uploadSpeed = Double.parseDouble(uploadSpeedStr);
+            double downloadSpeed = Double.parseDouble(downloadSpeedStr);
+            boolean isValid = uploadSpeed >= 100 && downloadSpeed >= 100;
+            
+            log.debug("工单 {} 带宽验证结果: {} (上传: {}, 下载: {})", 
+                order.getJobNo(), isValid, uploadSpeed, downloadSpeed);
+            return isValid;
+        } catch (Exception e) {
+            log.error("验证工单 {} 带宽时发生错误: {}", order.getJobNo(), e.getMessage());
+            return false;
         }
     }
     
-    private void validateOpticalPower(OrderInfo order) {
-        String fmPower = Optional.ofNullable(order.getFmOutputPower())
-            .orElse(order.getFmOutputPowerManual());
-        String odbPower = Optional.ofNullable(order.getOdbPowerMeter())
-            .orElse(order.getOdbPowerMeterManual());
-        
-        if (fmPower != null && odbPower != null) {
-            double fmValue = Double.parseDouble(fmPower);
-            double odbValue = Double.parseDouble(odbPower);
-            order.setOpticalDiffSuccess(
-                (fmValue - odbValue <= 1.6 && odbValue <= -26) ? 1 : 0
-            );
-        } else {
-            order.setOpticalDiffSuccess(-1);
+    private boolean validateOpticalPower(OrderInfo order) {
+        log.debug("验证工单 {} 的光功率数据", order.getJobNo());
+        try {
+            String fmPowerStr = Optional.ofNullable(order.getFmOutputPower())
+                .orElse(order.getFmOutputPowerManual());
+            String odbPowerStr = Optional.ofNullable(order.getOdbPowerMeter())
+                .orElse(order.getOdbPowerMeterManual());
+            
+            if (fmPowerStr == null || odbPowerStr == null) {
+                log.warn("工单 {} 缺少光功率数据 - FM功率: {}, ODB功率: {}", 
+                    order.getJobNo(), fmPowerStr, odbPowerStr);
+                return false;
+            }
+
+            double fmPower = Double.parseDouble(fmPowerStr);
+            double odbPower = Double.parseDouble(odbPowerStr);
+            boolean isValid = fmPower >= -8 && fmPower <= 2 && 
+                             odbPower >= -8 && odbPower <= 2;
+            
+            log.debug("工单 {} 光功率验证结果: {} (FM功率: {}, ODB功率: {})", 
+                order.getJobNo(), isValid, fmPower, odbPower);
+            return isValid;
+        } catch (Exception e) {
+            log.error("验证工单 {} 光功率时发生错误: {}", order.getJobNo(), e.getMessage());
+            return false;
         }
-    }
-    
-    private void determineQualityStatus(OrderInfo order) {
-        boolean isAutoSuccess = 
-            order.getSpeedTestIpDuplicate() == 0 &&
-            order.getSpeedTestRefIsDuplicate() == 0 &&
-            order.getSnIsDuplicate() == 0 &&
-            order.getContractIdIsDuplicate() == 0 &&
-            order.getUploadSpeedSuccess() == 1 &&
-            order.getDownloadSpeedSuccess() == 1 &&
-            order.getOpticalDiffSuccess() == 1 &&
-            (order.getItemStatus() == null || "Y".equals(order.getItemStatus()));
-        
-        order.setQualityStatus(isAutoSuccess ? "autoSuccess" : "autoFail");
-        order.setAutoSuccess(isAutoSuccess ? 1 : 0);
-    }
-    
-    private void setErrorValues(OrderInfo order) {
-        order.setUploadSpeedSuccess(-1);
-        order.setDownloadSpeedSuccess(-1);
-        order.setOpticalDiffSuccess(-1);
-        order.setAutoSuccess(-1);
-        order.setQualityStatus("autoFail");
     }
 
     @Override
