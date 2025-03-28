@@ -52,8 +52,8 @@ public interface OrderInfoRepository extends JpaRepository<OrderInfo, String>, J
     @Query("SELECT COUNT(o) FROM OrderInfo o WHERE o.ocrContractId = :ocrContractId")
     long countByOcrContractId(String ocrContractId);
 
-    // 根据创建时间范围和AI处理状态查询工单
-    @Query("SELECT o FROM OrderInfo o WHERE o.createDate BETWEEN :startDate AND :endDate AND o.isAIProcessed = :processed")
+    // 根据预约时间范围和AI处理状态查询工单
+    @Query("SELECT o FROM OrderInfo o WHERE DATE(o.appointmentDate) BETWEEN DATE(:startDate) AND DATE(:endDate) AND (o.isAIProcessed = :processed OR o.isAIProcessed IS NULL)")
     List<OrderInfo> findByCreateDateBetweenAndIsAIProcessed(
         @Param("startDate") LocalDateTime startDate,
         @Param("endDate") LocalDateTime endDate,

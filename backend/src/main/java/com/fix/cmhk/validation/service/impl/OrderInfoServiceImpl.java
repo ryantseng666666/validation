@@ -289,17 +289,30 @@ public class OrderInfoServiceImpl implements OrderInfoService {
             // 解析日期范围
             LocalDateTime startDate = LocalDate.parse(monthDate + "-01").atStartOfDay();
             LocalDateTime endDate = startDate.plusMonths(1).minusSeconds(1);
-            log.info("解析月份范围 - 开始日期: {}, 结束日期: {}", startDate, endDate);
+            log.info("解析月份范围 - 开始日期: {}, 结束日期: {}", 
+                startDate.toLocalDate(), endDate.toLocalDate());
 
             // 查询指定月份内未处理的工单
             List<OrderInfo> orders = orderInfoRepository.findByCreateDateBetweenAndIsAIProcessed(
                 startDate, endDate, 0);
             log.info("查询到待处理工单数量: {}", orders.size());
+            
+            // 记录查询条件用于调试
+            log.debug("查询条件 - 开始日期: {}, 结束日期: {}, AI处理状态: {}", 
+                startDate.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+                endDate.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+                0);
 
             if (orders.isEmpty()) {
                 log.warn("未找到需要处理的工单数据");
                 return "no data to process";
             }
+
+            // 记录找到的工单的appointmentDate，用于调试
+            orders.forEach(order -> 
+                log.debug("工单 {} 的预约时间: {}", 
+                    order.getJobNo(), 
+                    order.getAppointmentDate()));
 
             int successCount = 0;
             int failCount = 0;
